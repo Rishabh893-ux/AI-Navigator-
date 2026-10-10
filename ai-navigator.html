@@ -256,7 +256,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
 <div class="panel active" id="panel-dashboard">
   <div><div class="sec-head">Welcome to AI Navigator</div><div class="sec-sub">Your personalized AI learning hub — structured, clear, and always up to date.</div></div>
   <div class="grid3">
-    <div class="metric"><div class="metric-lbl">Topics covered</div><div class="metric-val" style="color:var(--blue)">3 / 10</div></div>
+    <div class="metric"><div class="metric-lbl">Topics covered</div><div class="metric-val" id="dash-topics" style="color:var(--blue)">3 / 10</div></div>
     <div class="metric"><div class="metric-lbl">Learning streak</div><div class="metric-val" style="color:var(--green)">5 days</div></div>
     <div class="metric"><div class="metric-lbl">New this week</div><div class="metric-val" style="color:var(--amber)">3</div></div>
   </div>
@@ -477,13 +477,17 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     </div>
   </div>
   <div class="api-banner">
-    <div class="api-banner-title">⚙️ Activate AI Mentor — enter your api key /div>
+    <div class="api-banner-title">⚙️ Activate AI Mentor — enter your API key</div>
     <div class="api-banner-body">
-      1. Go to <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a> → sign in → click <strong>"Create API key"</strong><br>
+      1. Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com/app/apikey</a> → sign in → click <strong>"Create API key"</strong><br>
       2. Copy the key (starts with <code>AIza...</code>)<br>
-      3. In this file, find <code>YOUR_GEMINI_API_KEY</code> and replace it with your key (search with Ctrl+F)<br>
-      4. Save the file and refresh the browser — the mentor will be live instantly
+      3. Paste it below and click <strong>Save key</strong> — it is stored only in this browser, never in the file
     </div>
+    <div class="chat-row" style="margin-top:10px">
+      <input type="password" id="api-key-input" placeholder="Paste your Gemini API key (AIza...)"/>
+      <button onclick="saveApiKey()">Save key</button>
+    </div>
+    <div class="api-banner-body" id="api-key-status" style="margin-top:6px"></div>
   </div>
 </div>
 
@@ -531,9 +535,28 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
 </div>
 
 <script>
-// ─── CONFIG — replace YOUR_GEMINI_API_KEY with your real key ───
-const GEMINI_API_KEY = 'enter your api key';
-const GEMINI_MODEL   = 'gemini-1.5-flash';
+// ─── CONFIG — the key is entered in the AI Mentor panel and kept in localStorage ───
+const GEMINI_MODEL   = 'gemini-2.5-flash';
+
+function getApiKey() {
+  try { return localStorage.getItem('ain_gemini_key') || ''; } catch(e) { return ''; }
+}
+
+function saveApiKey() {
+  var input = document.getElementById('api-key-input');
+  var key = (input ? input.value : '').trim();
+  try {
+    if (key) localStorage.setItem('ain_gemini_key', key);
+    else localStorage.removeItem('ain_gemini_key');
+  } catch(e) {}
+  if (input) input.value = '';
+  showKeyStatus();
+}
+
+function showKeyStatus() {
+  var el = document.getElementById('api-key-status');
+  if (el) el.textContent = getApiKey() ? '✅ Key saved in this browser.' : 'No key saved yet.';
+}
 const MENTOR_SYSTEM  = `You are an AI Mentor inside "AI Navigator", a platform helping students learn AI.
 Keep answers concise (2-4 sentences per point), friendly and encouraging.
 Suggest specific FREE resources (Kaggle, Fast.ai, Coursera free tier, YouTube, HuggingFace) when helpful.
@@ -587,7 +610,7 @@ function filterTopics(q) {
 }
 
 // ─── Progress ─────────────────────────────────────────────────
-function toggleCheck(btn) {
+function toggleCheck(btn, silent) {
   var checked = btn.classList.toggle('checked');
   btn.textContent = checked ? '✓' : '';
   var title = btn.nextElementSibling;
@@ -597,6 +620,7 @@ function toggleCheck(btn) {
     if (checked) { tag.className = 'tag tag-done'; tag.style.cssText='font-size:11px;padding:2px 8px'; tag.textContent = 'Done'; }
     else         { tag.className = 'tag tag-pend'; tag.style.cssText='font-size:11px;padding:2px 8px'; tag.textContent = 'Pending'; }
   }
+  if (silent) return;
   updateProgress();
   saveProgress();
 }
@@ -611,6 +635,7 @@ function updateProgress() {
   if (el('pct-count'))    el('pct-count').textContent = pct + '%';
   if (el('prog-fill'))    el('prog-fill').style.width = pct + '%';
   if (el('prog-pct'))     el('prog-pct').textContent = pct + '%';
+  if (el('dash-topics'))  el('dash-topics').textContent = done + ' / ' + total;
 }
 
 function saveProgress() {
@@ -623,16 +648,13 @@ function saveProgress() {
 
 function loadProgress() {
   try {
-    var saved = JSON.parse(localStorage.getItem('ain_progress') || '[]');
-    document.querySelectorAll('.check-btn').forEach(function(btn, i) {
-      if (saved[i]) {
-        btn.classList.add('checked'); btn.textContent = '✓';
-        var title = btn.nextElementSibling;
-        if (title) title.classList.add('done');
-        var tag = title ? title.nextElementSibling : null;
-        if (tag) { tag.className = 'tag tag-done'; tag.style.cssText='font-size:11px;padding:2px 8px'; tag.textContent = 'Done'; }
-      }
-    });
+    var raw = localStorage.getItem('ain_progress');
+    if (raw) {
+      var saved = JSON.parse(raw);
+      document.querySelectorAll('.check-btn').forEach(function(btn, i) {
+        if (!!saved[i] !== btn.classList.contains('checked')) toggleCheck(btn, true);
+      });
+    }
     updateProgress();
   } catch(e) {}
 }
@@ -660,10 +682,11 @@ function sendChat() {
   msgs.appendChild(typingDiv);
   msgs.scrollTop = msgs.scrollHeight;
 
-  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY') {
+  var apiKey = getApiKey();
+  if (!apiKey) {
     setTimeout(function() {
       typingDiv.querySelector('.msg-bub').innerHTML =
-        '⚠️ <strong>API key not set.</strong> Please read the yellow box below — it takes about 2 minutes to get a free key from Google AI Studio and add it to this file.';
+        '⚠️ <strong>API key not set.</strong> Please read the yellow box below — it takes about 2 minutes to get a free key from Google AI Studio and paste it in.';
       msgs.scrollTop = msgs.scrollHeight;
     }, 600);
     return;
@@ -676,13 +699,19 @@ function sendChat() {
     contents: chatHistory
   };
 
-  fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + GEMINI_API_KEY, {
+  fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify(body)
   })
   .then(function(res) { return res.json(); })
   .then(function(data) {
+    if (data.error) {
+      chatHistory.pop();
+      typingDiv.querySelector('.msg-bub').textContent = '⚠️ Gemini error: ' + (data.error.message || 'request failed') + ' — check your API key.';
+      msgs.scrollTop = msgs.scrollHeight;
+      return;
+    }
     var reply = (((data.candidates || [])[0] || {}).content || {});
     reply = ((reply.parts || [])[0] || {}).text || 'Sorry, no response received. Please try again.';
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
@@ -710,6 +739,7 @@ function escHtml(s) {
 
 // ─── Init ─────────────────────────────────────────────────────
 loadProgress();
+showKeyStatus();
 </script>
 </body>
 </html>
