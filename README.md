@@ -272,7 +272,7 @@ Released under the [MIT License](LICENSE). You're free to use, copy, change and 
 
 ---
 
-Made with 💙 by [Rishabh](https://github.com/Rishabh893-ux)
+Made by - [Rishabh](https://github.com/Rishabh893-ux)
 
 ⭐ **If AI Navigator helps you, please give it a star!** ⭐
 
