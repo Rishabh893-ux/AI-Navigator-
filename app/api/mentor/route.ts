@@ -16,6 +16,9 @@ const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 const UPSTREAM_TIMEOUT_MS = 55_000;
 
+// Let hosts such as Vercel run this route long enough for a slow Gemini reply (55s timeout + margin)
+export const maxDuration = 60;
+
 // Simple per-visitor limit for the shared server key. It lives in memory, so it resets when the
 // server restarts and isn't shared across serverless instances — good enough to stop casual abuse.
 const RATE_LIMIT = 20;
