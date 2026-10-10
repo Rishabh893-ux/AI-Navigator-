@@ -1,8 +1,24 @@
 # Secrets — never commit API keys
 .env
 .env.*
+!.env.example
 *.key
+*.pem
 secrets.*
+
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# Deployment
+.vercel/
+.netlify/
 
 # OS files
 .DS_Store
@@ -14,13 +30,6 @@ desktop.ini
 .idea/
 *.swp
 *~
-
-# Dependencies and build output (if a backend or tooling is added later)
-node_modules/
-dist/
-build/
-.vercel/
-.netlify/
 
 # Logs and test output
 *.log
