@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>AI Navigator — Your AI Learning Hub</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script>
+try {
+  var t = localStorage.getItem('ain_theme') ||
+    (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', t);
+} catch(e) {}
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -19,6 +26,20 @@
   --text:#1a1a18;--text2:#4a4a46;--text3:#888780;
   --shadow:0 1px 3px rgba(0,0,0,.06);
   --nav:56px;--sidebar:220px;--radius:10px;--radius-lg:14px;
+  --link-hover:#c5ddf6;--banner-text:#854F0B;--pink-lt:#FBEAF0;
+}
+:root[data-theme="dark"]{
+  --blue:#5AA2E6;--blue-lt:#173350;--blue-dk:#B5D4F4;
+  --green:#3CC193;--green-lt:#123B2F;--green-dk:#9FE1CB;
+  --amber:#F2B04E;--amber-lt:#3D2C10;--amber-dk:#F6CF8E;
+  --purple:#9D96EA;--purple-lt:#29264D;--purple-dk:#CECBF6;
+  --red-lt:#4A1D1D;--red-dk:#F4A9A9;
+  --gray-lt:#2A2A27;--gray:#9C9B94;
+  --bg:#141413;--surface:#1E1E1C;
+  --border:rgba(255,255,255,.10);--border2:rgba(255,255,255,.18);
+  --text:#ECEBE6;--text2:#BDBCB5;--text3:#8E8D86;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+  --link-hover:#22466B;--banner-text:#F6CF8E;--pink-lt:#45202F;
 }
 body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
 a{color:var(--blue);text-decoration:none}
@@ -35,6 +56,11 @@ button{font-family:inherit;cursor:pointer}
 .nav-tab:hover{background:var(--gray-lt);color:var(--text)}
 .nav-tab.active{background:var(--blue-lt);color:var(--blue-dk);font-weight:500}
 .nav-badge{background:var(--red-lt);color:var(--red-dk);font-size:10px;padding:1px 5px;border-radius:20px;margin-left:3px;font-weight:600;display:inline-block}
+.theme-btn{background:none;border:.5px solid var(--border2);border-radius:8px;font-size:15px;padding:3px 8px;color:var(--text2);margin-left:6px}
+.theme-btn:hover{background:var(--gray-lt)}
+.chat-tools{display:flex;justify-content:flex-end}
+.link-btn{background:none;border:none;color:var(--text3);font-size:12px;padding:2px 4px}
+.link-btn:hover{color:var(--blue);text-decoration:underline}
 .hamburger{display:none;background:none;border:none;font-size:20px;color:var(--text2);padding:4px 8px}
 
 /* LAYOUT */
@@ -125,7 +151,7 @@ button{font-family:inherit;cursor:pointer}
 .step-detail{font-size:12.5px;color:var(--text2);margin-top:3px;line-height:1.5}
 .step-links{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
 .res-link{font-size:11.5px;padding:4px 10px;background:var(--blue-lt);color:var(--blue-dk);border-radius:5px;transition:background .15s}
-.res-link:hover{background:#c5ddf6;text-decoration:none}
+.res-link:hover{background:var(--link-hover);text-decoration:none}
 
 /* SEARCH */
 .search-input{width:100%;padding:10px 16px;border:.5px solid var(--border2);border-radius:var(--radius);font-size:13.5px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
@@ -173,7 +199,7 @@ button{font-family:inherit;cursor:pointer}
 /* API KEY BANNER */
 .api-banner{background:var(--amber-lt);border:.5px solid var(--amber);border-radius:var(--radius);padding:14px 16px;margin-top:4px}
 .api-banner-title{font-size:13px;font-weight:600;color:var(--amber-dk);margin-bottom:6px}
-.api-banner-body{font-size:12.5px;color:#854F0B;line-height:1.6}
+.api-banner-body{font-size:12.5px;color:var(--banner-text);line-height:1.6}
 code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:12px;color:var(--blue-dk)}
 
 /* WEEKLY */
@@ -227,6 +253,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     <button class="nav-tab" onclick="showPanel('mentor')">AI Mentor</button>
     <button class="nav-tab" onclick="showPanel('weekly')">Weekly <span class="nav-badge">3</span></button>
   </div>
+  <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
   <button class="hamburger" onclick="toggleMobileNav()">&#9776;</button>
 </nav>
 
@@ -235,14 +262,14 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
 <!-- SIDEBAR -->
 <aside id="sidebar">
   <div class="sb-label">My level</div>
-  <button class="sb-item active" onclick="setSbActive(this)"><span class="sb-dot" style="background:#3B8BD4"></span>Beginner</button>
-  <button class="sb-item" onclick="setSbActive(this)"><span class="sb-dot" style="background:#EF9F27"></span>Intermediate</button>
-  <button class="sb-item" onclick="setSbActive(this)"><span class="sb-dot" style="background:#D85A30"></span>Advanced</button>
+  <button class="sb-item active" data-level="beginner" onclick="pickLevel('beginner')"><span class="sb-dot" style="background:#3B8BD4"></span>Beginner</button>
+  <button class="sb-item" data-level="intermediate" onclick="pickLevel('intermediate')"><span class="sb-dot" style="background:#EF9F27"></span>Intermediate</button>
+  <button class="sb-item" data-level="advanced" onclick="pickLevel('advanced')"><span class="sb-dot" style="background:#D85A30"></span>Advanced</button>
   <div class="sb-label">Focus areas</div>
-  <button class="sb-item" onclick="setSbActive(this)"><span class="sb-dot" style="background:#1D9E75"></span>ML / Deep Learning</button>
-  <button class="sb-item" onclick="setSbActive(this)"><span class="sb-dot" style="background:#7F77DD"></span>Generative AI</button>
-  <button class="sb-item" onclick="setSbActive(this)"><span class="sb-dot" style="background:#D4537E"></span>NLP</button>
-  <button class="sb-item" onclick="setSbActive(this)"><span class="sb-dot" style="background:#888780"></span>AI Ethics</button>
+  <button class="sb-item" data-focus="ml" onclick="pickFocus(this,'ml')"><span class="sb-dot" style="background:#1D9E75"></span>ML / Deep Learning</button>
+  <button class="sb-item" data-focus="genai" onclick="pickFocus(this,'genai')"><span class="sb-dot" style="background:#7F77DD"></span>Generative AI</button>
+  <button class="sb-item" data-focus="nlp" onclick="pickFocus(this,'nlp')"><span class="sb-dot" style="background:#D4537E"></span>NLP</button>
+  <button class="sb-item" data-focus="ethics" onclick="pickFocus(this,'ethics')"><span class="sb-dot" style="background:#888780"></span>AI Ethics</button>
   <div class="prog-wrap">
     <div class="prog-label"><span>Overall progress</span><span id="prog-pct">30%</span></div>
     <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:30%"></div></div>
@@ -257,7 +284,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
   <div><div class="sec-head">Welcome to AI Navigator</div><div class="sec-sub">Your personalized AI learning hub — structured, clear, and always up to date.</div></div>
   <div class="grid3">
     <div class="metric"><div class="metric-lbl">Topics covered</div><div class="metric-val" id="dash-topics" style="color:var(--blue)">3 / 10</div></div>
-    <div class="metric"><div class="metric-lbl">Learning streak</div><div class="metric-val" style="color:var(--green)">5 days</div></div>
+    <div class="metric"><div class="metric-lbl">Learning streak</div><div class="metric-val" id="dash-streak" style="color:var(--green)">1 day</div></div>
     <div class="metric"><div class="metric-lbl">New this week</div><div class="metric-val" style="color:var(--amber)">3</div></div>
   </div>
   <div class="card">
@@ -287,7 +314,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
       </div>
     </div>
     <div class="tool-row">
-      <div class="tool-icon" style="background:#FBEAF0">◇</div>
+      <div class="tool-icon" style="background:var(--pink-lt)">◇</div>
       <div class="tool-info">
         <div class="tool-name">Stable Diffusion 3.5</div>
         <div class="tool-desc">Open-source image generation that runs locally on consumer hardware. No API costs needed.</div>
@@ -311,9 +338,9 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
 <div class="panel" id="panel-roadmap">
   <div><div class="sec-head">Smart learning roadmap</div><div class="sec-sub">Step-by-step path tailored to your level. Free resources included.</div></div>
   <div class="level-btns">
-    <button class="lvl-btn sel" onclick="setLevel(this,'beginner')">Beginner</button>
-    <button class="lvl-btn" onclick="setLevel(this,'intermediate')">Intermediate</button>
-    <button class="lvl-btn" onclick="setLevel(this,'advanced')">Advanced</button>
+    <button class="lvl-btn sel" data-level="beginner" onclick="pickLevel('beginner', true)">Beginner</button>
+    <button class="lvl-btn" data-level="intermediate" onclick="pickLevel('intermediate', true)">Intermediate</button>
+    <button class="lvl-btn" data-level="advanced" onclick="pickLevel('advanced', true)">Advanced</button>
   </div>
   <div class="card">
     <!-- BEGINNER -->
@@ -377,9 +404,10 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
 <div class="panel" id="panel-topics">
   <div><div class="sec-head">AI topic explainer</div><div class="sec-sub">Complex topics made simple. Click any topic to expand, or search below.</div></div>
   <input class="search-input" type="text" id="topic-search" placeholder="Search topics (e.g. neural network, LLM, RAG...)" oninput="filterTopics(this.value)"/>
+  <div id="focus-note" class="card-sub" style="display:none"></div>
   <div id="topics-list" style="display:flex;flex-direction:column;gap:8px">
 
-    <div class="topic-card" data-kw="machine learning ml basics core supervised unsupervised">
+    <div class="topic-card" data-focus="ml" data-kw="machine learning ml basics core supervised unsupervised">
       <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-info">Core</span><span class="card-title">What is machine learning?</span></div>
         <span class="topic-chevron">▾</span>
@@ -387,7 +415,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
       <div class="topic-body">Machine learning teaches computers to learn from examples instead of hand-coded rules. You don't write "if ears are pointy and it meows → cat." You show the model thousands of labeled cat photos and it figures out the patterns on its own.<br><br><strong>Two main types:</strong> Supervised learning (labeled data, e.g. spam detection) and Unsupervised learning (unlabeled data, e.g. customer clustering).<br><br><strong>Key insight:</strong> More data + better algorithms = smarter models. Data replaces explicit rules.</div>
     </div>
 
-    <div class="topic-card" data-kw="llm large language model gpt claude gemini transformer chatgpt hot">
+    <div class="topic-card" data-focus="genai nlp" data-kw="llm large language model gpt claude gemini transformer chatgpt hot">
       <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-hot">Hot</span><span class="card-title">How do large language models (LLMs) work?</span></div>
         <span class="topic-chevron">▾</span>
@@ -395,7 +423,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
       <div class="topic-body">LLMs like GPT-4, Claude, and Gemini are trained on massive text datasets. They learn to predict "what token comes next?" billions of times. Through this, they absorb language patterns, reasoning, and world knowledge.<br><br>The architecture powering them is called a <strong>Transformer</strong>. It uses "attention" to understand which words in a sentence are most relevant to each other — even across long documents.<br><br><strong>Scale law:</strong> Bigger model + more data + more compute = significantly better performance. This is why GPT-3 → GPT-4 was such a large jump.</div>
     </div>
 
-    <div class="topic-card" data-kw="neural network deep learning perceptron layers backpropagation">
+    <div class="topic-card" data-focus="ml" data-kw="neural network deep learning perceptron layers backpropagation">
       <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-info">Core</span><span class="card-title">What is a neural network?</span></div>
         <span class="topic-chevron">▾</span>
@@ -403,7 +431,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
       <div class="topic-body">A neural network is inspired by the human brain. It has layers of connected mathematical "neurons." Data flows: input layer → hidden layers → output layer. Each connection has a weight that is adjusted during training.<br><br><strong>Deep learning</strong> = neural networks with many layers (the "deep" in deep learning). More layers allow the model to learn increasingly abstract patterns — from edges to shapes to faces.<br><br><strong>Training:</strong> The network makes predictions, calculates error (loss), and then adjusts weights using backpropagation to improve over time.</div>
     </div>
 
-    <div class="topic-card" data-kw="rag retrieval augmented generation vector database knowledge base chatbot new">
+    <div class="topic-card" data-focus="genai nlp" data-kw="rag retrieval augmented generation vector database knowledge base chatbot new">
       <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-new">Trending</span><span class="card-title">What is RAG (Retrieval Augmented Generation)?</span></div>
         <span class="topic-chevron">▾</span>
@@ -411,7 +439,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
       <div class="topic-body">RAG = a search engine + an LLM working together. When you ask a question, RAG first retrieves relevant documents from a knowledge base (using vector similarity search), then passes those to the LLM as extra context. The LLM uses them to generate a grounded answer.<br><br><strong>Why it matters:</strong> LLMs cannot access your private data or recent events. RAG solves this without expensive fine-tuning.<br><br><strong>Used in:</strong> Company chatbots, document Q&amp;A systems, customer support, legal research tools.</div>
     </div>
 
-    <div class="topic-card" data-kw="prompt engineering prompting chain of thought few shot system prompt api">
+    <div class="topic-card" data-focus="genai nlp" data-kw="prompt engineering prompting chain of thought few shot system prompt api">
       <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-hot">Practical</span><span class="card-title">What is prompt engineering?</span></div>
         <span class="topic-chevron">▾</span>
@@ -419,7 +447,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
       <div class="topic-body">Prompt engineering is the skill of crafting inputs to an LLM to consistently get the best outputs. Small changes in phrasing can dramatically change results.<br><br><strong>Key techniques:</strong><br>• <strong>Chain-of-thought:</strong> Ask the model to "think step by step" — dramatically improves reasoning<br>• <strong>Few-shot prompting:</strong> Show 2-3 examples of the format you want<br>• <strong>Role prompting:</strong> "You are an expert Python developer..."<br>• <strong>System prompts:</strong> Set the model's behavior, tone, and constraints upfront</div>
     </div>
 
-    <div class="topic-card" data-kw="fine tuning training model lora peft domain specific custom">
+    <div class="topic-card" data-focus="ml genai" data-kw="fine tuning training model lora peft domain specific custom">
       <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-info">Intermediate</span><span class="card-title">What is fine-tuning an AI model?</span></div>
         <span class="topic-chevron">▾</span>
@@ -427,7 +455,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
       <div class="topic-body">Fine-tuning means taking a pre-trained model (like LLaMA or Mistral) and continuing to train it on your own domain-specific data. The model keeps its general knowledge but adapts to your specific task.<br><br><strong>Examples:</strong> Medical question answering, code in your company's style, customer support for your product, legal document classification.<br><br><strong>LoRA / PEFT:</strong> Efficient fine-tuning techniques that work without expensive GPUs. LoRA adds small trainable matrices to the model — you only train a fraction of the parameters but get great results.</div>
     </div>
 
-    <div class="topic-card" data-kw="bias ethics fairness responsible ai discrimination gender race">
+    <div class="topic-card" data-focus="ethics" data-kw="bias ethics fairness responsible ai discrimination gender race">
       <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-warn">Ethics</span><span class="card-title">What is AI bias and why does it matter?</span></div>
         <span class="topic-chevron">▾</span>
@@ -467,6 +495,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
 <div class="panel" id="panel-mentor">
   <div><div class="sec-head">AI mentor</div><div class="sec-sub">Ask anything about your AI learning journey. Powered by Google Gemini.</div></div>
   <div class="card mentor-card">
+    <div class="chat-tools"><button class="link-btn" onclick="clearChat()">Clear chat</button></div>
     <div class="chat-wrap" id="chat-messages">
       <div class="msg"><div class="msg-av ai">AI</div><div class="msg-bub">Hi! I'm your AI Mentor. I can help you figure out what to learn next, explain any AI concept simply, recommend free courses, or answer career questions. What's on your mind?</div></div>
       <div class="msg"><div class="msg-av ai">AI</div><div class="msg-bub">Try asking:<br>• "What should I learn after Python basics?"<br>• "Explain transformers simply"<br>• "How do I get a job in AI?"<br>• "What's the difference between ML and deep learning?"</div></div>
@@ -580,19 +609,44 @@ function toggleMobileNav() {
   document.getElementById('sidebar').classList.toggle('open');
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────
-function setSbActive(el) {
-  document.querySelectorAll('.sb-item').forEach(function(s) { s.classList.remove('active'); });
-  el.classList.add('active');
+// ─── Theme ────────────────────────────────────────────────────
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('ain_theme', next); } catch(e) {}
+  updateThemeBtn();
 }
 
-// ─── Roadmap ──────────────────────────────────────────────────
-function setLevel(btn, level) {
-  document.querySelectorAll('.lvl-btn').forEach(function(b) { b.classList.remove('sel'); });
-  btn.classList.add('sel');
+function updateThemeBtn() {
+  var btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+}
+
+// ─── Level (sidebar + roadmap stay in sync) ───────────────────
+function pickLevel(level, stay) {
+  document.querySelectorAll('.lvl-btn').forEach(function(b) { b.classList.toggle('sel', b.dataset.level === level); });
+  document.querySelectorAll('.sb-item[data-level]').forEach(function(b) { b.classList.toggle('active', b.dataset.level === level); });
   document.querySelectorAll('.roadmap-steps').forEach(function(r) { r.style.display = 'none'; });
   var target = document.getElementById('roadmap-' + level);
   if (target) target.style.display = 'flex';
+  try { localStorage.setItem('ain_level', level); } catch(e) {}
+  if (!stay) showPanel('roadmap');
+}
+
+// ─── Focus areas filter the Topics panel ──────────────────────
+var activeFocus = '';
+
+function pickFocus(btn, focus) {
+  activeFocus = activeFocus === focus ? '' : focus;
+  document.querySelectorAll('.sb-item[data-focus]').forEach(function(b) { b.classList.toggle('active', b.dataset.focus === activeFocus); });
+  var note = document.getElementById('focus-note');
+  if (note) {
+    note.style.display = activeFocus ? '' : 'none';
+    note.innerHTML = activeFocus ? 'Showing topics for <strong>' + escHtml(btn.textContent) + '</strong> — click it again to show all.' : '';
+  }
+  var search = document.getElementById('topic-search');
+  filterTopics(search ? search.value : '');
+  showPanel('topics');
 }
 
 // ─── Topics ───────────────────────────────────────────────────
@@ -605,7 +659,8 @@ function filterTopics(q) {
   document.querySelectorAll('.topic-card').forEach(function(card) {
     var kw = (card.getAttribute('data-kw') || '');
     var title = (card.querySelector('.card-title') || {textContent:''}).textContent.toLowerCase();
-    card.style.display = (!q || kw.includes(q) || title.includes(q)) ? '' : 'none';
+    var inFocus = !activeFocus || (card.getAttribute('data-focus') || '').split(' ').indexOf(activeFocus) >= 0;
+    card.style.display = inFocus && (!q || kw.includes(q) || title.includes(q)) ? '' : 'none';
   });
 }
 
@@ -659,8 +714,82 @@ function loadProgress() {
   } catch(e) {}
 }
 
+// ─── Learning streak ──────────────────────────────────────────
+function dayKey(d) {
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+
+function updateStreak() {
+  var streak = 1;
+  try {
+    var data = JSON.parse(localStorage.getItem('ain_streak') || '{}');
+    var today = new Date();
+    var yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+    if (data.last === dayKey(today)) streak = data.count || 1;
+    else if (data.last === dayKey(yesterday)) streak = (data.count || 0) + 1;
+    localStorage.setItem('ain_streak', JSON.stringify({ last: dayKey(today), count: streak }));
+  } catch(e) {}
+  var el = document.getElementById('dash-streak');
+  if (el) el.textContent = streak + (streak === 1 ? ' day' : ' days');
+}
+
 // ─── AI Mentor ────────────────────────────────────────────────
 var chatHistory = [];
+var MAX_SAVED_TURNS = 40;
+
+function saveChat() {
+  try { localStorage.setItem('ain_chat', JSON.stringify(chatHistory.slice(-MAX_SAVED_TURNS))); } catch(e) {}
+}
+
+function addMsg(role, html) {
+  var msgs = document.getElementById('chat-messages');
+  var div = document.createElement('div');
+  div.className = role === 'user' ? 'msg user-msg' : 'msg';
+  div.innerHTML = (role === 'user' ? '<div class="msg-av usr">U</div>' : '<div class="msg-av ai">AI</div>') +
+    '<div class="msg-bub">' + html + '</div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function loadChat() {
+  try {
+    chatHistory = JSON.parse(localStorage.getItem('ain_chat') || '[]');
+    chatHistory.forEach(function(turn) {
+      var text = ((turn.parts || [])[0] || {}).text || '';
+      addMsg(turn.role, turn.role === 'user' ? escHtml(text) : fmtReply(text));
+    });
+  } catch(e) { chatHistory = []; }
+}
+
+function clearChat() {
+  chatHistory = [];
+  saveChat();
+  var msgs = document.getElementById('chat-messages');
+  // keep the two welcome messages
+  while (msgs.children.length > 2) msgs.removeChild(msgs.lastChild);
+}
+
+// Retries when Gemini is overloaded (503) or rate-limited (429)
+function callGemini(body, apiKey, onRetry, attempt) {
+  attempt = attempt || 0;
+  return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    body: JSON.stringify(body)
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    var code = data.error && data.error.code;
+    if ((code === 503 || code === 429) && attempt < 3) {
+      var wait = 2000 * Math.pow(2, attempt);
+      onRetry(attempt + 1, wait);
+      return new Promise(function(r) { setTimeout(r, wait); })
+        .then(function() { return callGemini(body, apiKey, onRetry, attempt + 1); });
+    }
+    return data;
+  });
+}
 
 function sendChat() {
   var input = document.getElementById('chat-input');
@@ -671,16 +800,9 @@ function sendChat() {
   var msgs = document.getElementById('chat-messages');
   if (!msgs) return;
 
-  var userDiv = document.createElement('div');
-  userDiv.className = 'msg user-msg';
-  userDiv.innerHTML = '<div class="msg-av usr">U</div><div class="msg-bub">' + escHtml(text) + '</div>';
-  msgs.appendChild(userDiv);
-
-  var typingDiv = document.createElement('div');
-  typingDiv.className = 'msg';
-  typingDiv.innerHTML = '<div class="msg-av ai">AI</div><div class="msg-bub"><div class="typing"><div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div></div></div>';
-  msgs.appendChild(typingDiv);
-  msgs.scrollTop = msgs.scrollHeight;
+  addMsg('user', escHtml(text));
+  var typingHtml = '<div class="typing"><div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div></div>';
+  var typingDiv = addMsg('model', typingHtml);
 
   var apiKey = getApiKey();
   if (!apiKey) {
@@ -699,22 +821,23 @@ function sendChat() {
     contents: chatHistory
   };
 
-  fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify(body)
+  callGemini(body, apiKey, function(n, wait) {
+    typingDiv.querySelector('.msg-bub').innerHTML = typingHtml +
+      '<div class="card-sub">Gemini is busy — retrying in ' + (wait / 1000) + 's (attempt ' + n + ' of 3)…</div>';
   })
-  .then(function(res) { return res.json(); })
   .then(function(data) {
     if (data.error) {
       chatHistory.pop();
-      typingDiv.querySelector('.msg-bub').textContent = '⚠️ Gemini error: ' + (data.error.message || 'request failed') + ' — check your API key.';
+      var busy = data.error.code === 503 || data.error.code === 429;
+      typingDiv.querySelector('.msg-bub').textContent = '⚠️ Gemini error: ' + (data.error.message || 'request failed') +
+        (busy ? ' — please try again in a minute.' : ' — check your API key.');
       msgs.scrollTop = msgs.scrollHeight;
       return;
     }
     var reply = (((data.candidates || [])[0] || {}).content || {});
     reply = ((reply.parts || [])[0] || {}).text || 'Sorry, no response received. Please try again.';
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
+    saveChat();
     typingDiv.querySelector('.msg-bub').innerHTML = fmtReply(reply);
     msgs.scrollTop = msgs.scrollHeight;
   })
@@ -729,7 +852,7 @@ function fmtReply(t) {
   return t
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-    .replace(/`([^`]+)`/g,'<code style="background:#f0f0ee;padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px">$1</code>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
     .replace(/\n/g,'<br>');
 }
 
@@ -740,6 +863,10 @@ function escHtml(s) {
 // ─── Init ─────────────────────────────────────────────────────
 loadProgress();
 showKeyStatus();
+updateThemeBtn();
+updateStreak();
+loadChat();
+try { pickLevel(localStorage.getItem('ain_level') || 'beginner', true); } catch(e) {}
 </script>
 </body>
 </html>
