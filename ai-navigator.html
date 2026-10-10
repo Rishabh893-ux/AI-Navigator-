@@ -4,6 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>AI Navigator — Your AI Learning Hub</title>
+<meta name="description" content="A free, structured AI learning hub for students: roadmap, topic explainers, progress tracker and a Gemini-powered AI mentor."/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%23E6F1FB'/%3E%3Ccircle cx='8' cy='8' r='3' fill='none' stroke='%233B8BD4' stroke-width='1.5'/%3E%3C/svg%3E"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script>
 try {
@@ -56,6 +58,7 @@ button{font-family:inherit;cursor:pointer}
 .nav-tab:hover{background:var(--gray-lt);color:var(--text)}
 .nav-tab.active{background:var(--blue-lt);color:var(--blue-dk);font-weight:500}
 .nav-badge{background:var(--red-lt);color:var(--red-dk);font-size:10px;padding:1px 5px;border-radius:20px;margin-left:3px;font-weight:600;display:inline-block}
+[role="button"]:focus-visible,button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .theme-btn{background:none;border:.5px solid var(--border2);border-radius:8px;font-size:15px;padding:3px 8px;color:var(--text2);margin-left:6px}
 .theme-btn:hover{background:var(--gray-lt)}
 .chat-tools{display:flex;justify-content:flex-end}
@@ -195,6 +198,7 @@ button{font-family:inherit;cursor:pointer}
 .chat-row input:focus{border-color:var(--blue)}
 .chat-row button{padding:10px 18px;background:var(--blue);color:#fff;border-radius:9px;border:none;font-size:13px;font-weight:500;transition:background .15s}
 .chat-row button:hover{background:var(--blue-dk)}
+.chat-row button:disabled{opacity:.55;cursor:wait}
 
 /* API KEY BANNER */
 .api-banner{background:var(--amber-lt);border:.5px solid var(--amber);border-radius:var(--radius);padding:14px 16px;margin-top:4px}
@@ -251,7 +255,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     <button class="nav-tab" onclick="showPanel('topics')">Topics</button>
     <button class="nav-tab" onclick="showPanel('progress')">Progress</button>
     <button class="nav-tab" onclick="showPanel('mentor')">AI Mentor</button>
-    <button class="nav-tab" onclick="showPanel('weekly')">Weekly <span class="nav-badge">3</span></button>
+    <button class="nav-tab" onclick="showPanel('weekly')">Updates <span class="nav-badge" id="updates-badge">3</span></button>
   </div>
   <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
   <button class="hamburger" onclick="toggleMobileNav()">&#9776;</button>
@@ -285,40 +289,40 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
   <div class="grid3">
     <div class="metric"><div class="metric-lbl">Topics covered</div><div class="metric-val" id="dash-topics" style="color:var(--blue)">3 / 10</div></div>
     <div class="metric"><div class="metric-lbl">Learning streak</div><div class="metric-val" id="dash-streak" style="color:var(--green)">1 day</div></div>
-    <div class="metric"><div class="metric-lbl">New this week</div><div class="metric-val" style="color:var(--amber)">3</div></div>
+    <div class="metric"><div class="metric-lbl">AI updates</div><div class="metric-val" style="color:var(--amber)">3</div></div>
   </div>
   <div class="card">
-    <div class="card-title" style="margin-bottom:14px">Trending AI tools right now</div>
+    <div class="card-title" style="margin-bottom:14px">Popular AI tools to try</div>
     <div class="tool-row">
       <div class="tool-icon" style="background:var(--blue-lt)">✦</div>
       <div class="tool-info">
-        <div class="tool-name">Claude 3.7 Sonnet</div>
-        <div class="tool-desc">Anthropic's flagship with extended thinking — best for complex reasoning, coding, and analysis.</div>
+        <div class="tool-name">Claude (Anthropic)</div>
+        <div class="tool-desc">The Claude 5 family — Opus for the hardest reasoning and coding, Sonnet as the everyday all-rounder, Haiku for fast, low-cost tasks.</div>
         <div class="tool-tags"><span class="tag tag-hot">Hot</span><span class="tag tag-info">Reasoning</span></div>
       </div>
     </div>
     <div class="tool-row">
       <div class="tool-icon" style="background:var(--green-lt)">⬡</div>
       <div class="tool-info">
-        <div class="tool-name">Gemini 2.5 Pro</div>
-        <div class="tool-desc">Google's multimodal model — 1M token context, deep research mode, excellent at code generation.</div>
-        <div class="tool-tags"><span class="tag tag-new">New</span><span class="tag tag-info">Multimodal</span></div>
+        <div class="tool-name">Gemini (Google)</div>
+        <div class="tool-desc">Multimodal models with a free API tier — Gemini 3.8 Flash powers the AI Mentor in this app.</div>
+        <div class="tool-tags"><span class="tag tag-new">Free tier</span><span class="tag tag-info">Multimodal</span></div>
       </div>
     </div>
     <div class="tool-row">
       <div class="tool-icon" style="background:var(--amber-lt)">◈</div>
       <div class="tool-info">
-        <div class="tool-name">GPT-4o</div>
-        <div class="tool-desc">OpenAI's omni-model — handles text, images, and audio natively. Strong API ecosystem for builders.</div>
-        <div class="tool-tags"><span class="tag tag-info">Omni</span><span class="tag tag-warn">Popular</span></div>
+        <div class="tool-name">ChatGPT (OpenAI)</div>
+        <div class="tool-desc">GPT-5-series models for chat, images and voice, with a strong API ecosystem for builders.</div>
+        <div class="tool-tags"><span class="tag tag-info">All-rounder</span><span class="tag tag-warn">Popular</span></div>
       </div>
     </div>
     <div class="tool-row">
       <div class="tool-icon" style="background:var(--pink-lt)">◇</div>
       <div class="tool-info">
-        <div class="tool-name">Stable Diffusion 3.5</div>
-        <div class="tool-desc">Open-source image generation that runs locally on consumer hardware. No API costs needed.</div>
-        <div class="tool-tags"><span class="tag tag-new">Open source</span><span class="tag tag-info">Image Gen</span></div>
+        <div class="tool-name">Open models on Hugging Face</div>
+        <div class="tool-desc">Llama, Qwen, Mistral and thousands more — download and run them yourself, or try them free in Spaces.</div>
+        <div class="tool-tags"><span class="tag tag-new">Open source</span><span class="tag tag-info">Run locally</span></div>
       </div>
     </div>
   </div>
@@ -326,10 +330,10 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     <div class="card-title">Recommended for you</div>
     <div class="card-sub" style="margin-bottom:14px">Based on your beginner level and recent activity</div>
     <div class="grid2">
-      <div class="rec-card" onclick="showPanel('roadmap')"><div class="rec-lbl" style="color:var(--blue)">Next step →</div><div class="rec-title">Python for ML</div><div class="rec-sub">NumPy, Pandas fundamentals</div></div>
-      <div class="rec-card" onclick="showPanel('topics')"><div class="rec-lbl" style="color:var(--green)">Explore →</div><div class="rec-title">What is a Neural Network?</div><div class="rec-sub">Clear explanation, no jargon</div></div>
-      <div class="rec-card" onclick="showPanel('mentor')"><div class="rec-lbl" style="color:var(--purple)">Ask AI →</div><div class="rec-title">Get a personalized plan</div><div class="rec-sub">Chat with your AI mentor</div></div>
-      <div class="rec-card" onclick="showPanel('weekly')"><div class="rec-lbl" style="color:var(--amber)">Read →</div><div class="rec-title">This week in AI</div><div class="rec-sub">3 new updates to explore</div></div>
+      <div class="rec-card" role="button" tabindex="0" onclick="showPanel('roadmap')"><div class="rec-lbl" style="color:var(--blue)">Next step →</div><div class="rec-title">Python for ML</div><div class="rec-sub">NumPy, Pandas fundamentals</div></div>
+      <div class="rec-card" role="button" tabindex="0" onclick="showPanel('topics')"><div class="rec-lbl" style="color:var(--green)">Explore →</div><div class="rec-title">What is a Neural Network?</div><div class="rec-sub">Clear explanation, no jargon</div></div>
+      <div class="rec-card" role="button" tabindex="0" onclick="showPanel('mentor')"><div class="rec-lbl" style="color:var(--purple)">Ask AI →</div><div class="rec-title">Get a personalized plan</div><div class="rec-sub">Chat with your AI mentor</div></div>
+      <div class="rec-card" role="button" tabindex="0" onclick="showPanel('weekly')"><div class="rec-lbl" style="color:var(--amber)">Read →</div><div class="rec-title">Latest in AI</div><div class="rec-sub">3 updates to explore</div></div>
     </div>
   </div>
 </div>
@@ -360,7 +364,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     </div>
     <!-- ADVANCED -->
     <div id="roadmap-advanced" class="roadmap-steps" style="display:none">
-      <div class="step-row"><div class="step-col"><div class="step-dot curr">→</div><div class="step-line"></div></div><div class="step-body"><div class="step-title">Research paper reading &amp; replication</div><div class="step-detail">Reproduce key papers: Attention is All You Need, CLIP, DALL-E, LoRA.</div><div class="step-links"><a class="res-link" href="https://paperswithcode.com" target="_blank">Papers With Code</a></div></div></div>
+      <div class="step-row"><div class="step-col"><div class="step-dot curr">→</div><div class="step-line"></div></div><div class="step-body"><div class="step-title">Research paper reading &amp; replication</div><div class="step-detail">Reproduce key papers: Attention is All You Need, CLIP, DALL-E, LoRA.</div><div class="step-links"><a class="res-link" href="https://huggingface.co/papers/trending" target="_blank">Hugging Face Trending Papers</a></div></div></div>
       <div class="step-row"><div class="step-col"><div class="step-dot pend">2</div><div class="step-line"></div></div><div class="step-body"><div class="step-title">Custom model training at scale</div><div class="step-detail">Distributed training, FSDP, mixed precision, LoRA/PEFT fine-tuning.</div><div class="step-links"><a class="res-link" href="https://huggingface.co/docs/peft" target="_blank">PEFT Docs</a></div></div></div>
       <div class="step-row"><div class="step-col"><div class="step-dot pend">3</div></div><div class="step-body" style="padding-bottom:0"><div class="step-title">AI alignment &amp; safety research</div><div class="step-detail">RLHF, Constitutional AI, interpretability, and responsible AI deployment.</div><div class="step-links"><a class="res-link" href="https://www.anthropic.com/research" target="_blank">Anthropic Research</a></div></div></div>
     </div>
@@ -408,7 +412,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
   <div id="topics-list" style="display:flex;flex-direction:column;gap:8px">
 
     <div class="topic-card" data-focus="ml" data-kw="machine learning ml basics core supervised unsupervised">
-      <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
+      <div class="topic-hdr" role="button" tabindex="0" aria-expanded="false" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-info">Core</span><span class="card-title">What is machine learning?</span></div>
         <span class="topic-chevron">▾</span>
       </div>
@@ -416,7 +420,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     </div>
 
     <div class="topic-card" data-focus="genai nlp" data-kw="llm large language model gpt claude gemini transformer chatgpt hot">
-      <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
+      <div class="topic-hdr" role="button" tabindex="0" aria-expanded="false" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-hot">Hot</span><span class="card-title">How do large language models (LLMs) work?</span></div>
         <span class="topic-chevron">▾</span>
       </div>
@@ -424,7 +428,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     </div>
 
     <div class="topic-card" data-focus="ml" data-kw="neural network deep learning perceptron layers backpropagation">
-      <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
+      <div class="topic-hdr" role="button" tabindex="0" aria-expanded="false" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-info">Core</span><span class="card-title">What is a neural network?</span></div>
         <span class="topic-chevron">▾</span>
       </div>
@@ -432,7 +436,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     </div>
 
     <div class="topic-card" data-focus="genai nlp" data-kw="rag retrieval augmented generation vector database knowledge base chatbot new">
-      <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
+      <div class="topic-hdr" role="button" tabindex="0" aria-expanded="false" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-new">Trending</span><span class="card-title">What is RAG (Retrieval Augmented Generation)?</span></div>
         <span class="topic-chevron">▾</span>
       </div>
@@ -440,7 +444,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     </div>
 
     <div class="topic-card" data-focus="genai nlp" data-kw="prompt engineering prompting chain of thought few shot system prompt api">
-      <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
+      <div class="topic-hdr" role="button" tabindex="0" aria-expanded="false" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-hot">Practical</span><span class="card-title">What is prompt engineering?</span></div>
         <span class="topic-chevron">▾</span>
       </div>
@@ -448,7 +452,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     </div>
 
     <div class="topic-card" data-focus="ml genai" data-kw="fine tuning training model lora peft domain specific custom">
-      <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
+      <div class="topic-hdr" role="button" tabindex="0" aria-expanded="false" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-info">Intermediate</span><span class="card-title">What is fine-tuning an AI model?</span></div>
         <span class="topic-chevron">▾</span>
       </div>
@@ -456,7 +460,7 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     </div>
 
     <div class="topic-card" data-focus="ethics" data-kw="bias ethics fairness responsible ai discrimination gender race">
-      <div class="topic-hdr" onclick="toggleTopic(this.parentElement)">
+      <div class="topic-hdr" role="button" tabindex="0" aria-expanded="false" onclick="toggleTopic(this.parentElement)">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="tag tag-warn">Ethics</span><span class="card-title">What is AI bias and why does it matter?</span></div>
         <span class="topic-chevron">▾</span>
       </div>
@@ -502,18 +506,18 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
     </div>
     <div class="chat-row">
       <input type="text" id="chat-input" placeholder="Ask your AI mentor..." onkeydown="if(event.key==='Enter')sendChat()"/>
-      <button onclick="sendChat()">Send ↗</button>
+      <button id="chat-send" onclick="sendChat()">Send ↗</button>
     </div>
   </div>
   <div class="api-banner">
     <div class="api-banner-title">⚙️ Activate AI Mentor — enter your API key</div>
     <div class="api-banner-body">
       1. Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com/app/apikey</a> → sign in → click <strong>"Create API key"</strong><br>
-      2. Copy the key (starts with <code>AIza...</code>)<br>
+      2. Copy the key<br>
       3. Paste it below and click <strong>Save key</strong> — it is stored only in this browser, never in the file
     </div>
     <div class="chat-row" style="margin-top:10px">
-      <input type="password" id="api-key-input" placeholder="Paste your Gemini API key (AIza...)"/>
+      <input type="password" id="api-key-input" placeholder="Paste your Gemini API key" onkeydown="if(event.key==='Enter')saveApiKey()"/>
       <button onclick="saveApiKey()">Save key</button>
     </div>
     <div class="api-banner-body" id="api-key-status" style="margin-top:6px"></div>
@@ -522,40 +526,44 @@ code{background:var(--gray-lt);padding:2px 6px;border-radius:4px;font-family:mon
 
 <!-- ====== WEEKLY ====== -->
 <div class="panel" id="panel-weekly">
-  <div><div class="sec-head">Weekly AI updates</div><div class="sec-sub">The most important AI developments, curated for students. Updated every Monday.</div></div>
+  <div><div class="sec-head">AI updates</div><div class="sec-sub">Important AI changes for students, plus trusted places to follow the news yourself.</div></div>
   <div class="card">
-    <div class="week-lbl">Week of April 14, 2026</div>
+    <div class="week-lbl">Last reviewed October 10, 2026</div>
     <div class="update-row">
-      <div class="update-date">Apr 14</div>
+      <div class="update-date">2026</div>
       <div class="update-content">
-        <div class="update-title">Gemini 2.5 Pro launches with 1M context + deep research mode</div>
-        <div class="update-body">Google's latest model handles book-length contexts and autonomously researches topics across the web. The free tier lets students experiment with 1M token prompts at no cost — a huge advantage for projects.</div>
-        <div class="update-tags"><span class="tag tag-new">New model</span><span class="tag tag-info">Free tier</span></div>
+        <div class="update-title">Claude 5 family: Opus, Sonnet and Haiku</div>
+        <div class="update-body">Anthropic's current models come in three sizes. Try the free tier at claude.ai — it's especially good at explaining code and walking through reasoning step by step.</div>
+        <div class="update-tags"><span class="tag tag-new">New models</span><span class="tag tag-info">Free tier</span></div>
       </div>
     </div>
     <div class="update-row">
-      <div class="update-date">Apr 12</div>
+      <div class="update-date">2026</div>
       <div class="update-content">
-        <div class="update-title">OpenAI releases o3-mini — fastest reasoning model yet</div>
-        <div class="update-body">o3-mini achieves near-o1 reasoning quality at 5x lower cost. Particularly strong at math and coding. Available via API and free ChatGPT tier with usage limits — great for student projects.</div>
-        <div class="update-tags"><span class="tag tag-hot">Hot</span><span class="tag tag-info">Reasoning</span></div>
+        <div class="update-title">Gemini 2.5 Flash is closed to new API users — use Gemini 3.8 Flash</div>
+        <div class="update-body">New Google AI Studio keys can no longer call gemini-2.5-flash. If an old tutorial's code returns a 404, switch the model name to gemini-3.8-flash. Busy-hour 503 errors are common, so retry after a few seconds (this app does it for you).</div>
+        <div class="update-tags"><span class="tag tag-hot">Builders</span><span class="tag tag-info">Free API</span></div>
       </div>
     </div>
     <div class="update-row">
-      <div class="update-date">Apr 10</div>
+      <div class="update-date">Jul 2025</div>
       <div class="update-content">
-        <div class="update-title">Study: fine-tuned small models beat large models on specific tasks</div>
-        <div class="update-body">Stanford researchers found fine-tuned 7B models consistently outperform GPT-4o on domain-specific tasks like medical coding. Key lesson for students: smaller, well-tuned models often win in real production scenarios.</div>
+        <div class="update-title">Papers with Code has shut down — use Hugging Face Papers</div>
+        <div class="update-body">Meta retired Papers with Code; its address now redirects to Hugging Face Trending Papers, which links research papers to their code. Note that the old benchmark leaderboards were not carried over.</div>
         <div class="update-tags"><span class="tag tag-warn">Research</span></div>
       </div>
     </div>
-    <div class="update-row">
-      <div class="update-date">Apr 8</div>
-      <div class="update-content">
-        <div class="update-title">Hugging Face offers free GPU hours for student projects</div>
-        <div class="update-body">Free A10G GPU hours on HuggingFace Spaces for students with a .edu email. Rolling deadline. This lets you train and demo real models without any cloud costs — perfect for building portfolio projects.</div>
-        <div class="update-tags"><span class="tag tag-new">Opportunity</span><span class="tag tag-info">Free GPU</span></div>
-      </div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:6px">Follow the news yourself</div>
+    <div class="card-sub" style="margin-bottom:12px">Reliable, free sources — check one each week.</div>
+    <div class="step-links">
+      <a class="res-link" href="https://huggingface.co/papers/trending" target="_blank">Hugging Face Papers</a>
+      <a class="res-link" href="https://www.deeplearning.ai/the-batch/" target="_blank">The Batch (DeepLearning.AI)</a>
+      <a class="res-link" href="https://importai.substack.com" target="_blank">Import AI newsletter</a>
+      <a class="res-link" href="https://www.anthropic.com/news" target="_blank">Anthropic news</a>
+      <a class="res-link" href="https://blog.google/technology/ai/" target="_blank">Google AI blog</a>
+      <a class="res-link" href="https://openai.com/news/" target="_blank">OpenAI news</a>
     </div>
   </div>
 </div>
@@ -598,8 +606,9 @@ function showPanel(id) {
   var panel = document.getElementById('panel-' + id);
   if (panel) panel.classList.add('active');
   document.querySelectorAll('.nav-tab').forEach(function(t) {
-    if (t.textContent.toLowerCase().includes(id.toLowerCase().slice(0,4))) t.classList.add('active');
+    if ((t.getAttribute('onclick') || '').indexOf("'" + id + "'") >= 0) t.classList.add('active');
   });
+  if (id === 'weekly') markUpdatesSeen();
   document.getElementById('nav-tabs-menu').classList.remove('open');
   document.getElementById('sidebar').classList.remove('open');
 }
@@ -607,6 +616,21 @@ function showPanel(id) {
 function toggleMobileNav() {
   document.getElementById('nav-tabs-menu').classList.toggle('open');
   document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ─── Updates badge ────────────────────────────────────────────
+var UPDATES_VERSION = '2026-10-10';
+
+function markUpdatesSeen() {
+  try { localStorage.setItem('ain_updates_seen', UPDATES_VERSION); } catch(e) {}
+  updateBadge();
+}
+
+function updateBadge() {
+  var seen = '';
+  try { seen = localStorage.getItem('ain_updates_seen') || ''; } catch(e) {}
+  var badge = document.getElementById('updates-badge');
+  if (badge) badge.style.display = seen === UPDATES_VERSION ? 'none' : '';
 }
 
 // ─── Theme ────────────────────────────────────────────────────
@@ -651,8 +675,19 @@ function pickFocus(btn, focus) {
 
 // ─── Topics ───────────────────────────────────────────────────
 function toggleTopic(card) {
-  card.classList.toggle('open');
+  var open = card.classList.toggle('open');
+  var hdr = card.querySelector('.topic-hdr');
+  if (hdr) hdr.setAttribute('aria-expanded', open);
 }
+
+// Enter / Space activate div "buttons" (topic headers, recommendation cards)
+document.addEventListener('keydown', function(e) {
+  var el = e.target;
+  if ((e.key === 'Enter' || e.key === ' ') && el.getAttribute && el.getAttribute('role') === 'button' && el.tagName !== 'BUTTON') {
+    e.preventDefault();
+    el.click();
+  }
+});
 
 function filterTopics(q) {
   q = q.toLowerCase().trim();
@@ -736,6 +771,28 @@ function updateStreak() {
 // ─── AI Mentor ────────────────────────────────────────────────
 var chatHistory = [];
 var MAX_SAVED_TURNS = 40;
+var chatBusy = false;
+
+function setChatBusy(busy) {
+  chatBusy = busy;
+  var btn = document.getElementById('chat-send');
+  if (btn) btn.disabled = busy;
+}
+
+// Tells the mentor the learner's level and progress so advice is personal
+function learnerContext() {
+  var level = 'beginner';
+  try { level = localStorage.getItem('ain_level') || 'beginner'; } catch(e) {}
+  var done = [], todo = [];
+  document.querySelectorAll('.course-item').forEach(function(item) {
+    var title = (item.querySelector('.course-title') || {}).textContent || '';
+    (item.querySelector('.check-btn.checked') ? done : todo).push(title);
+  });
+  return '\n\nLearner profile: chosen level is ' + level + '.' +
+    '\nCompleted topics: ' + (done.join('; ') || 'none yet') + '.' +
+    '\nNot yet completed: ' + (todo.join('; ') || 'none') + '.' +
+    '\nUse this to personalise advice, e.g. suggest the next uncompleted topic.';
+}
 
 function saveChat() {
   try { localStorage.setItem('ain_chat', JSON.stringify(chatHistory.slice(-MAX_SAVED_TURNS))); } catch(e) {}
@@ -794,7 +851,7 @@ function callGemini(body, apiKey, onRetry, attempt) {
 function sendChat() {
   var input = document.getElementById('chat-input');
   var text = (input ? input.value : '').trim();
-  if (!text) return;
+  if (!text || chatBusy) return;
   input.value = '';
 
   var msgs = document.getElementById('chat-messages');
@@ -815,9 +872,10 @@ function sendChat() {
   }
 
   chatHistory.push({ role: 'user', parts: [{ text: text }] });
+  setChatBusy(true);
 
   var body = {
-    system_instruction: { parts: [{ text: MENTOR_SYSTEM }] },
+    system_instruction: { parts: [{ text: MENTOR_SYSTEM + learnerContext() }] },
     contents: chatHistory
   };
 
@@ -826,6 +884,7 @@ function sendChat() {
       '<div class="card-sub">Gemini is busy — retrying in ' + (wait / 1000) + 's (attempt ' + n + ' of 3)…</div>';
   })
   .then(function(data) {
+    setChatBusy(false);
     if (data.error) {
       chatHistory.pop();
       var busy = data.error.code === 503 || data.error.code === 429;
@@ -834,14 +893,21 @@ function sendChat() {
       msgs.scrollTop = msgs.scrollHeight;
       return;
     }
-    var reply = (((data.candidates || [])[0] || {}).content || {});
-    reply = ((reply.parts || [])[0] || {}).text || 'Sorry, no response received. Please try again.';
+    var parts = ((((data.candidates || [])[0] || {}).content || {}).parts || []);
+    var reply = parts.filter(function(pt) { return pt.text && !pt.thought; })
+                     .map(function(pt) { return pt.text; }).join('');
+    if (!reply) {
+      chatHistory.pop();
+      typingDiv.querySelector('.msg-bub').textContent = 'Sorry, no response received. Please try again.';
+      return;
+    }
     chatHistory.push({ role: 'model', parts: [{ text: reply }] });
     saveChat();
     typingDiv.querySelector('.msg-bub').innerHTML = fmtReply(reply);
     msgs.scrollTop = msgs.scrollHeight;
   })
   .catch(function(err) {
+    setChatBusy(false);
     chatHistory.pop();
     typingDiv.querySelector('.msg-bub').textContent = 'Network error. Please check your internet connection and try again.';
     msgs.scrollTop = msgs.scrollHeight;
@@ -864,6 +930,7 @@ function escHtml(s) {
 loadProgress();
 showKeyStatus();
 updateThemeBtn();
+updateBadge();
 updateStreak();
 loadChat();
 try { pickLevel(localStorage.getItem('ain_level') || 'beginner', true); } catch(e) {}
