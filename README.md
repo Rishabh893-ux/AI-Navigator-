@@ -6,6 +6,8 @@
 
 A free, structured AI learning hub for students. It's one HTML file: no install, no build step and no server.
 
+![AI Navigator dashboard](docs/screenshots/dashboard.png)
+
 ## Features
 
 - **Dashboard:** your progress, learning streak, popular AI tools and suggested next steps.
@@ -16,6 +18,24 @@ A free, structured AI learning hub for students. It's one HTML file: no install,
 - **AI updates:** important changes for students, plus trusted news sources.
 - **Dark mode**, a phone-friendly layout, and keyboard navigation.
 
+## Screenshots
+
+| Roadmap | Topic explainer |
+|---|---|
+| ![Learning roadmap with Beginner, Intermediate and Advanced levels](docs/screenshots/roadmap.png) | ![Searchable topic cards with one expanded](docs/screenshots/topics.png) |
+| **Progress tracker** | **AI updates** |
+| ![Checklist showing 4 of 10 topics done](docs/screenshots/progress.png) | ![AI updates and trusted news sources](docs/screenshots/updates.png) |
+
+### AI Mentor
+
+The mentor knows your progress. After "NumPy & Pandas" was ticked off, it suggested the next unfinished topic:
+
+![AI Mentor recommending Linear Regression as the next step](docs/screenshots/ai-mentor.png)
+
+| Dark mode | On a phone |
+|---|---|
+| ![Dashboard in dark mode](docs/screenshots/dark-mode.png) | <img src="docs/screenshots/mobile.png" alt="Dashboard on a phone screen" width="260"/> |
+
 ## Project structure
 
 ```
@@ -23,7 +43,9 @@ AI-Navigator-/
 ├── ai-navigator.html   # The whole app: HTML, CSS and JavaScript
 ├── README.md           # This file
 ├── LICENSE             # MIT License
-└── .gitignore          # Keeps secrets, OS and editor files out of Git
+├── .gitignore          # Keeps secrets, OS and editor files out of Git
+└── docs/
+    └── screenshots/    # Images used in this README
 ```
 
 ## Getting started
@@ -63,6 +85,7 @@ Mentor messages are sent to Google's Gemini API, together with your level and fi
 
 - **Model:** change `GEMINI_MODEL` near the top of the `<script>` block.
 - **AI updates tab:** edit the `panel-weekly` section, then bump `UPDATES_VERSION` in the script so the "new" badge shows again for returning users.
+- **Screenshots:** replace the images in `docs/screenshots/`, keeping the same file names, and the README updates by itself. Clear the API key box before taking a screenshot.
 
 ## Troubleshooting
 
@@ -72,6 +95,16 @@ Mentor messages are sent to Google's Gemini API, together with your level and fi
 | "API key not valid" | Create a new key in Google AI Studio and save it again. |
 | "high demand" / "Gemini is busy" | Wait a minute and try again. The app already retries 3 times. |
 | "took too long to answer" | Gemini is slow right now. Send the message again. |
+
+## Roadmap
+
+Planned improvements:
+
+- [ ] Quizzes for each topic that tick off progress when passed
+- [ ] Achievements and badges for streaks and finished tracks
+- [ ] Export and import progress as a file
+- [ ] Publish online with GitHub Pages
+- [ ] Optional backend so visitors can use the mentor without their own key
 
 ## Tech
 
