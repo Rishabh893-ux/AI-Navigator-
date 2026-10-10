@@ -772,6 +772,7 @@ function updateStreak() {
 var chatHistory = [];
 var MAX_SAVED_TURNS = 40;
 var chatBusy = false;
+var REQUEST_TIMEOUT_MS = 60000;
 
 function setChatBusy(busy) {
   chatBusy = busy;
@@ -830,12 +831,17 @@ function clearChat() {
 // Retries when Gemini is overloaded (503) or rate-limited (429)
 function callGemini(body, apiKey, onRetry, attempt) {
   attempt = attempt || 0;
+  // Give up on a request that hangs, instead of showing the typing dots forever
+  var ctrl = window.AbortController ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, REQUEST_TIMEOUT_MS) : null;
   return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal: ctrl ? ctrl.signal : undefined
   })
   .then(function(res) { return res.json(); })
+  .finally(function() { clearTimeout(timer); })
   .then(function(data) {
     var code = data.error && data.error.code;
     if ((code === 503 || code === 429) && attempt < 3) {
@@ -909,15 +915,22 @@ function sendChat() {
   .catch(function(err) {
     setChatBusy(false);
     chatHistory.pop();
-    typingDiv.querySelector('.msg-bub').textContent = 'Network error. Please check your internet connection and try again.';
+    typingDiv.querySelector('.msg-bub').textContent = err && err.name === 'AbortError'
+      ? 'Gemini took too long to answer (over 60s). Please try again.'
+      : 'Network error. Please check your internet connection and try again.';
     msgs.scrollTop = msgs.scrollHeight;
   });
 }
 
+// Renders the small Markdown subset Gemini uses: headings, bullets, bold, italics, links, code
 function fmtReply(t) {
   return t
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    .replace(/^#{1,6}\s+(.+)$/gm,'<strong>$1</strong>')
+    .replace(/^(\s*)[*-]\s+/gm,'$1• ')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[^*\w])\*(?!\s)([^*\n]+?)\*(?!\w)/g,'$1<em>$2</em>')
     .replace(/`([^`]+)`/g,'<code>$1</code>')
     .replace(/\n/g,'<br>');
 }
