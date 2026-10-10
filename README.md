@@ -1,5 +1,9 @@
 # AI Navigator
 
+![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
+![HTML, CSS, JS](https://img.shields.io/badge/stack-HTML%20%7C%20CSS%20%7C%20JS-blue.svg)
+![No build step](https://img.shields.io/badge/build-none-lightgrey.svg)
+
 A free, structured AI learning hub for students. It's one HTML file: no install, no build step and no server.
 
 ## Features
@@ -8,9 +12,19 @@ A free, structured AI learning hub for students. It's one HTML file: no install,
 - **Roadmap:** step-by-step learning paths for Beginner, Intermediate and Advanced levels, with free resources.
 - **Topic explainer:** plain-language explanations of ML, LLMs, neural networks, RAG, prompt engineering, fine-tuning and AI bias. You can search them or filter by focus area.
 - **Progress tracker:** a 10-topic checklist that saves in your browser.
-- **AI Mentor:** a chat assistant powered by Google Gemini. It knows your level and finished topics, remembers the conversation, and retries automatically when Gemini is busy.
+- **AI Mentor:** a chat assistant powered by Google Gemini (`gemini-3.8-flash`). It knows your level and finished topics, remembers the conversation, formats its answers (lists, bold, links), retries automatically when Gemini is busy, and gives up after 60 seconds instead of hanging.
 - **AI updates:** important changes for students, plus trusted news sources.
 - **Dark mode**, a phone-friendly layout, and keyboard navigation.
+
+## Project structure
+
+```
+AI-Navigator-/
+├── ai-navigator.html   # The whole app: HTML, CSS and JavaScript
+├── README.md           # This file
+├── LICENSE             # MIT License
+└── .gitignore          # Keeps secrets, OS and editor files out of Git
+```
 
 ## Getting started
 
@@ -50,6 +64,23 @@ Mentor messages are sent to Google's Gemini API, together with your level and fi
 - **Model:** change `GEMINI_MODEL` near the top of the `<script>` block.
 - **AI updates tab:** edit the `panel-weekly` section, then bump `UPDATES_VERSION` in the script so the "new" badge shows again for returning users.
 
+## Troubleshooting
+
+| Message in the chat | What to do |
+|---|---|
+| "API key not set" | Paste your key in the yellow box and click **Save key**. |
+| "API key not valid" | Create a new key in Google AI Studio and save it again. |
+| "high demand" / "Gemini is busy" | Wait a minute and try again. The app already retries 3 times. |
+| "took too long to answer" | Gemini is slow right now. Send the message again. |
+
 ## Tech
 
 Plain HTML, CSS and JavaScript in a single file, with no dependencies apart from the Inter font from Google Fonts.
+
+## Contributing
+
+Suggestions and fixes are welcome. Open an issue or a pull request. Please don't commit API keys or other secrets; `.gitignore` already excludes `.env` files.
+
+## License
+
+Released under the [MIT License](LICENSE). You're free to use, copy, change and share this project, as long as you keep the copyright notice.

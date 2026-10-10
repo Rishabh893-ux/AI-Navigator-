@@ -1,0 +1,30 @@
+# Secrets — never commit API keys
+.env
+.env.*
+*.key
+secrets.*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Dependencies and build output (if a backend or tooling is added later)
+node_modules/
+dist/
+build/
+.vercel/
+.netlify/
+
+# Logs and test output
+*.log
+npm-debug.log*
+coverage/
+test-results/
+playwright-report/
