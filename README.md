@@ -91,9 +91,9 @@ Skills unlock as you finish their prerequisites. Your recommended next skill and
 
 ### 🤖 The agent mentor takes action
 
-Asked for a study plan, the mentor built one around this learner's progress and **saved it to the dashboard** itself:
+Asked for a study plan, the mentor built one and **saved it to the dashboard** itself (see the green action card), which also unlocked the *Planner* badge:
 
-<img src="docs/screenshots/ai-mentor.png" alt="AI Mentor saving a 3-week study plan with an action card" width="860"/>
+<img src="docs/screenshots/ai-mentor.png" alt="AI Mentor saving a 3-week study plan: the request, a 'Saved study plan' action card, the reply and a Planner badge pop-up" width="860"/>
 
 <table>
   <tr>
