@@ -12,8 +12,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Gemini](https://img.shields.io/badge/AI-Google%20Gemini-8E75B2?logo=googlegemini&logoColor=white)](https://ai.google.dev)
 [![Tests](https://img.shields.io/badge/tests-Vitest-6E9F18?logo=vitest&logoColor=white)](#-testing)
+[![Live demo](https://img.shields.io/badge/Live_demo-Vercel-000000?logo=vercel&logoColor=white)](https://ai-navigator-five-nu.vercel.app)
 
-[**Features**](#-features) · [**Screenshots**](#-screenshots) · [**Quick start**](#-quick-start) · [**AI Mentor setup**](#-turn-on-the-ai-mentor) · [**Deploy**](#-deploy-for-free)
+[**🌐 Live demo**](https://ai-navigator-five-nu.vercel.app) · [**Features**](#-features) · [**Screenshots**](#-screenshots) · [**Quick start**](#-quick-start) · [**AI Mentor setup**](#-turn-on-the-ai-mentor) · [**Deploy**](#-deploy-for-free)
 
 <img src="docs/screenshots/dashboard.png" alt="AI Navigator dashboard" width="860"/>
 
@@ -340,7 +341,7 @@ To reset everything, clear this site's data in your browser settings.
 - [ ] Export and import progress as a file
 - [ ] Streaming (word-by-word) mentor replies
 - [ ] Logins and cloud-saved progress
-- [ ] Live demo on Vercel
+- [x] Live demo on Vercel: [ai-navigator-five-nu.vercel.app](https://ai-navigator-five-nu.vercel.app)
 
 ## 🤝 Contributing
 
