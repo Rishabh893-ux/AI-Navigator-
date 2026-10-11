@@ -24,12 +24,14 @@
 ## 📖 Table of contents
 
 - [About](#-about)
+- [What's new](#-whats-new-in-v3)
 - [Features](#-features)
 - [Screenshots](#-screenshots)
 - [Quick start](#-quick-start)
 - [Turn on the AI Mentor](#-turn-on-the-ai-mentor)
 - [Deploy for free](#-deploy-for-free)
 - [How the AI Mentor works](#-how-the-ai-mentor-works)
+- [Built with](#%EF%B8%8F-built-with)
 - [Project structure](#-project-structure)
 - [Testing](#-testing)
 - [Customise the content](#%EF%B8%8F-customise-the-content)
@@ -50,6 +52,17 @@ Learning AI can feel overwhelming. There are too many courses, too much jargon, 
 5. **work with an AI mentor** that knows your progress and can quiz you, plan your weeks and update your skill tree for you.
 
 It's free, open source, and your progress stays in your own browser.
+
+## 🆕 What's new in v3
+
+| | New | In one line |
+|---|---|---|
+| 🌳 | **Skill tree** | 17 skills that unlock step by step, each with a quiz to prove you've mastered it |
+| 🤖 | **Agent mentor** | The AI mentor can now *act*: quiz you, save a study plan, mark skills done (with Undo) |
+| 🏆 | **Achievements** | 14 badges to earn, with a pop-up when you unlock one |
+| 📊 | **Stats** | An activity heatmap, quiz scores and progress by level |
+
+Updating from an older version? Your progress carries over automatically. See the full history in [CHANGELOG.md](CHANGELOG.md).
 
 ## ✨ Features
 
@@ -187,6 +200,19 @@ sequenceDiagram
 - **Fair use:** with the server key, each visitor can make 40 requests every 10 minutes (each tool step counts), and other websites are blocked.
 - **Reliable:** when Gemini is busy (503 or 429), the app retries after 2s, 4s and 8s. It doesn't retry a used-up quota, gives up cleanly after 60 seconds, and stops after 4 tool steps.
 
+## 🛠️ Built with
+
+| Layer | Technology |
+|---|---|
+| Framework | [Next.js 16](https://nextjs.org) (App Router) + [React 19](https://react.dev) |
+| Language | [TypeScript 5](https://www.typescriptlang.org) |
+| AI | [Google Gemini API](https://ai.google.dev) with **function calling**, behind a Next.js route handler |
+| Styling | Plain CSS with light and dark theme tokens. The charts are hand-built SVG/HTML, with no chart library |
+| Storage | The browser's `localStorage`, with no database |
+| Testing | [Vitest](https://vitest.dev) unit tests |
+| Font | Inter, via `next/font` |
+| Hosting | Ready for [Vercel](https://vercel.com) |
+
 ## 📁 Project structure
 
 ```
@@ -218,6 +244,7 @@ AI-Navigator-/
 ├── tests/                    # Unit tests (Vitest)
 ├── docs/                     # Logo and README screenshots
 ├── .env.example              # Template for your Gemini key
+├── CHANGELOG.md              # Version history
 └── package.json
 ```
 
@@ -321,7 +348,8 @@ Contributions are welcome! 💙
 
 1. Fork the repo and create a branch: `git checkout -b my-feature`
 2. Make your changes, then run `npm run lint`, `npm run typecheck` and `npm test`
-3. Open a pull request describing what you changed
+3. Add a line to [CHANGELOG.md](CHANGELOG.md) for anything users will notice
+4. Open a pull request describing what you changed
 
 Please **never commit API keys** or other secrets.
 
