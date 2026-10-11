@@ -56,7 +56,8 @@ export const TOOLS: { icon: string; iconBg: string; name: string; desc: string; 
 ];
 
 export interface RoadmapStep {
-  status: "done" | "curr" | "pend";
+  /** Skill-tree skill this step teaches — its progress decides the step's ✓ / → / number */
+  skill: string;
   title: string;
   detail: string;
   links: { label: string; href: string }[];
@@ -65,7 +66,7 @@ export interface RoadmapStep {
 export const ROADMAP: Record<Level, RoadmapStep[]> = {
   beginner: [
     {
-      status: "done",
+      skill: "ai-basics",
       title: "Introduction to AI & ML",
       detail: "Understand what AI is, its history, key terms, and real-world uses.",
       links: [
@@ -74,7 +75,7 @@ export const ROADMAP: Record<Level, RoadmapStep[]> = {
       ],
     },
     {
-      status: "done",
+      skill: "python",
       title: "Python basics",
       detail: "Variables, loops, functions, file handling. Python is the language of AI.",
       links: [
@@ -83,7 +84,7 @@ export const ROADMAP: Record<Level, RoadmapStep[]> = {
       ],
     },
     {
-      status: "done",
+      skill: "numpy-pandas",
       title: "Python for ML — NumPy & Pandas",
       detail: "Data manipulation, arrays, and dataframes. Used in every ML project.",
       links: [
@@ -92,7 +93,7 @@ export const ROADMAP: Record<Level, RoadmapStep[]> = {
       ],
     },
     {
-      status: "curr",
+      skill: "ml-basics",
       title: "Machine learning fundamentals",
       detail: "Linear regression, decision trees, model evaluation, scikit-learn basics.",
       links: [
@@ -100,7 +101,7 @@ export const ROADMAP: Record<Level, RoadmapStep[]> = {
       ],
     },
     {
-      status: "pend",
+      skill: "mlops",
       title: "Build your first ML project",
       detail: "Train a model on real data, evaluate it, and deploy a simple demo online.",
       links: [
@@ -109,7 +110,7 @@ export const ROADMAP: Record<Level, RoadmapStep[]> = {
       ],
     },
     {
-      status: "pend",
+      skill: "neural-nets",
       title: "Intro to neural networks & deep learning",
       detail: "Perceptrons, backpropagation, TensorFlow and PyTorch basics.",
       links: [
@@ -120,19 +121,19 @@ export const ROADMAP: Record<Level, RoadmapStep[]> = {
   ],
   intermediate: [
     {
-      status: "curr",
+      skill: "deep-learning",
       title: "Deep learning — CNN, RNN, Transformer",
       detail: "Understand and implement the core architectures powering modern AI.",
       links: [{ label: "Dive into Deep Learning", href: "https://d2l.ai" }],
     },
     {
-      status: "pend",
+      skill: "llms",
       title: "NLP & large language models",
       detail: "Tokenization, fine-tuning BERT/GPT, prompt engineering, RLHF.",
       links: [{ label: "HuggingFace NLP Course", href: "https://huggingface.co/learn" }],
     },
     {
-      status: "pend",
+      skill: "cnn",
       title: "Computer vision & multimodal AI",
       detail: "Image classification, object detection, CLIP, and vision-language models.",
       links: [{ label: "Fast.ai Part 2", href: "https://www.fast.ai" }],
@@ -140,19 +141,19 @@ export const ROADMAP: Record<Level, RoadmapStep[]> = {
   ],
   advanced: [
     {
-      status: "curr",
+      skill: "transformers",
       title: "Research paper reading & replication",
       detail: "Reproduce key papers: Attention is All You Need, CLIP, DALL-E, LoRA.",
       links: [{ label: "Hugging Face Trending Papers", href: "https://huggingface.co/papers/trending" }],
     },
     {
-      status: "pend",
+      skill: "fine-tuning",
       title: "Custom model training at scale",
       detail: "Distributed training, FSDP, mixed precision, LoRA/PEFT fine-tuning.",
       links: [{ label: "PEFT Docs", href: "https://huggingface.co/docs/peft" }],
     },
     {
-      status: "pend",
+      skill: "ethics",
       title: "AI alignment & safety research",
       detail: "RLHF, Constitutional AI, interpretability, and responsible AI deployment.",
       links: [{ label: "Anthropic Research", href: "https://www.anthropic.com/research" }],
@@ -328,27 +329,6 @@ export const TOPICS: Topic[] = [
       </>
     ),
   },
-];
-
-export interface Course {
-  title: string;
-  /** Checked when the learner has no saved progress yet */
-  initiallyDone: boolean;
-  /** Shows "In progress" instead of "Pending" while unchecked */
-  inProgress?: boolean;
-}
-
-export const COURSES: Course[] = [
-  { title: "What is AI? Key concepts and history", initiallyDone: true },
-  { title: "Python basics — variables, loops, functions", initiallyDone: true },
-  { title: "Introduction to machine learning concepts", initiallyDone: true },
-  { title: "NumPy & Pandas for data manipulation", initiallyDone: false, inProgress: true },
-  { title: "Linear regression & model evaluation", initiallyDone: false },
-  { title: "Decision trees & random forests", initiallyDone: false },
-  { title: "First ML project — train and deploy a model", initiallyDone: false },
-  { title: "Neural network basics — perceptrons, backprop", initiallyDone: false },
-  { title: "Intro to deep learning with PyTorch", initiallyDone: false },
-  { title: "Transformers & how LLMs work", initiallyDone: false },
 ];
 
 /** Bump this whenever UPDATES changes, so returning visitors see the "new" badge again. */

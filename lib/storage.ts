@@ -9,6 +9,12 @@ export const KEYS = {
   chat: "ain_chat",
   apiKey: "ain_gemini_key",
   updatesSeen: "ain_updates_seen",
+  skills: "ain_skills",
+  quizLog: "ain_quiz_log",
+  activity: "ain_activity",
+  counters: "ain_counters",
+  plan: "ain_plan",
+  achievements: "ain_achievements",
 } as const;
 
 export function readString(key: string): string | null {

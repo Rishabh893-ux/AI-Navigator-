@@ -1,16 +1,19 @@
 import { connection, type NextRequest } from "next/server";
 import {
   buildSystemPrompt,
-  MAX_MESSAGE_CHARS,
-  MAX_MESSAGES,
-  type ChatMessage,
+  MAX_CONTENTS,
+  MAX_TEXT_CHARS,
+  type Content,
   type LearnerProfile,
   type MentorResponse,
+  type Part,
 } from "@/lib/mentor";
+import { MENTOR_TOOL_NAMES, MENTOR_TOOLS } from "@/lib/mentorTools";
 
-// Server-side proxy to Google Gemini.
+// Server-side proxy to Google Gemini, with tool calling for the agent mentor.
 // - If GEMINI_API_KEY is set, the key stays on the server and visitors don't need one.
 // - Otherwise the visitor's own key (saved in their browser) is forwarded for that request only.
+// The browser runs the tools (learner data lives there) and sends the results back in `contents`.
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
@@ -19,11 +22,17 @@ const UPSTREAM_TIMEOUT_MS = 55_000;
 // Let hosts such as Vercel run this route long enough for a slow Gemini reply (55s timeout + margin)
 export const maxDuration = 60;
 
-// Simple per-visitor limit for the shared server key. It lives in memory, so it resets when the
-// server restarts and isn't shared across serverless instances — good enough to stop casual abuse.
-const RATE_LIMIT = 20;
+// Simple per-visitor limit for the shared server key. Each tool round trip counts as a request.
+// It lives in memory, so it resets when the server restarts and isn't shared across serverless
+// instances — good enough to stop casual abuse.
+const RATE_LIMIT = 40;
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const hits = new Map<string, number[]>();
+
+const MAX_PARTS = 10;
+const MAX_JSON_CHARS = 6000;
+const MAX_SIGNATURE_CHARS = 40_000;
+const TOOL_NAMES = new Set<string>(MENTOR_TOOL_NAMES);
 
 function rateLimited(ip: string): boolean {
   const now = Date.now();
@@ -47,30 +56,61 @@ function errorResponse(code: number, message: string, reason?: "no_key" | "rate_
   return Response.json(body, { status: code });
 }
 
-function cleanMessages(input: unknown): ChatMessage[] {
-  if (!Array.isArray(input)) return [];
-  const messages = input
-    .filter(
-      (m): m is ChatMessage =>
-        !!m && (m.role === "user" || m.role === "model") && typeof m.text === "string" && m.text.trim() !== "",
-    )
-    .slice(-MAX_MESSAGES)
-    .map((m) => ({ role: m.role, text: m.text.slice(0, MAX_MESSAGE_CHARS) }));
-  // Gemini expects the conversation to start with the user
-  while (messages.length && messages[0].role !== "user") messages.shift();
-  return messages;
+const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+const smallJson = (v: unknown) => JSON.stringify(v ?? {}).length <= MAX_JSON_CHARS;
+const signature = (v: unknown) =>
+  typeof v === "string" && v.length <= MAX_SIGNATURE_CHARS ? { thoughtSignature: v } : {};
+
+/** Keeps only the part shapes the mentor uses, with size limits. Returns null for anything else. */
+function cleanPart(raw: unknown, role: Content["role"]): Part | null {
+  if (!isObject(raw)) return null;
+  if (typeof raw.text === "string" && raw.text.trim()) {
+    return { text: raw.text.slice(0, MAX_TEXT_CHARS), ...(role === "model" ? signature(raw.thoughtSignature) : {}) };
+  }
+  if (role === "model" && isObject(raw.functionCall)) {
+    const call = raw.functionCall;
+    if (typeof call.name !== "string" || !TOOL_NAMES.has(call.name)) return null;
+    const args = isObject(call.args) && smallJson(call.args) ? call.args : {};
+    const id = typeof call.id === "string" ? { id: call.id.slice(0, 100) } : {};
+    return { functionCall: { name: call.name, args, ...id }, ...signature(raw.thoughtSignature) };
+  }
+  if (role === "user" && isObject(raw.functionResponse)) {
+    const res = raw.functionResponse;
+    if (typeof res.name !== "string" || !TOOL_NAMES.has(res.name)) return null;
+    if (!isObject(res.response) || !smallJson(res.response)) return null;
+    const id = typeof res.id === "string" ? { id: res.id.slice(0, 100) } : {};
+    return { functionResponse: { name: res.name, ...id, response: res.response } };
+  }
+  return null;
 }
 
-function cleanList(input: unknown): string[] {
-  return Array.isArray(input)
-    ? input.filter((s): s is string => typeof s === "string").slice(0, 20).map((s) => s.slice(0, 120))
-    : [];
+function cleanContents(input: unknown): Content[] {
+  if (!Array.isArray(input)) return [];
+  const contents: Content[] = [];
+  for (const item of input.slice(-MAX_CONTENTS)) {
+    if (!isObject(item) || (item.role !== "user" && item.role !== "model") || !Array.isArray(item.parts)) continue;
+    const role = item.role;
+    const parts = item.parts
+      .slice(0, MAX_PARTS)
+      .map((p) => cleanPart(p, role))
+      .filter((p): p is Part => p !== null);
+    if (parts.length) contents.push({ role, parts });
+  }
+  // Gemini expects the conversation to start with a plain user message
+  while (contents.length && !(contents[0].role === "user" && contents[0].parts.some((p) => "text" in p))) {
+    contents.shift();
+  }
+  return contents;
 }
 
 function cleanProfile(input: unknown): LearnerProfile {
-  const p = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
-  const level = typeof p.level === "string" ? p.level.slice(0, 20) : "beginner";
-  return { level, done: cleanList(p.done), todo: cleanList(p.todo) };
+  const p = isObject(input) ? input : {};
+  return {
+    level: typeof p.level === "string" ? p.level.slice(0, 20) : "beginner",
+    progress: isObject(p.progress) && smallJson(p.progress) ? (p.progress as LearnerProfile["progress"]) : {},
+    streak: typeof p.streak === "number" ? p.streak : 0,
+    plan: typeof p.plan === "string" ? p.plan.slice(0, 120) : null,
+  };
 }
 
 /** Tells the page whether the server has its own key, so it can hide the "paste your key" box. */
@@ -98,15 +138,15 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let payload: { messages?: unknown; profile?: unknown };
+  let payload: { contents?: unknown; profile?: unknown };
   try {
     payload = await request.json();
   } catch {
     return errorResponse(400, "The request was not valid JSON.");
   }
 
-  const messages = cleanMessages(payload.messages);
-  if (!messages.length || messages[messages.length - 1].role !== "user") {
+  const contents = cleanContents(payload.contents);
+  if (!contents.length || contents[contents.length - 1].role !== "user") {
     return errorResponse(400, "Send at least one message.");
   }
 
@@ -117,7 +157,8 @@ export async function POST(request: NextRequest) {
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: buildSystemPrompt(cleanProfile(payload.profile)) }] },
-        contents: messages.map((m) => ({ role: m.role, parts: [{ text: m.text }] })),
+        contents,
+        tools: [{ functionDeclarations: MENTOR_TOOLS }],
       }),
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
@@ -134,15 +175,17 @@ export async function POST(request: NextRequest) {
     return errorResponse(code, data?.error?.message || "Gemini returned an error.");
   }
 
-  const parts: { text?: string; thought?: boolean }[] = data.candidates?.[0]?.content?.parts || [];
-  const reply = parts
-    .filter((p) => p.text && !p.thought)
-    .map((p) => p.text)
-    .join("");
-  if (!reply) {
+  // Return the model's turn as-is (minus hidden "thought" text), so its thought signatures
+  // can be sent back with the tool results — Gemini rejects tool results without them.
+  const rawParts: unknown[] = data.candidates?.[0]?.content?.parts || [];
+  const parts = rawParts
+    .filter((p) => !(isObject(p) && p.thought === true))
+    .map((p) => cleanPart(p, "model"))
+    .filter((p): p is Part => p !== null);
+  if (!parts.length) {
     return errorResponse(502, "Sorry, no response received. Please try again.");
   }
 
-  const body: MentorResponse = { reply };
+  const body: MentorResponse = { parts };
   return Response.json(body);
 }

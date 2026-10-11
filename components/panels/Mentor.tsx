@@ -2,62 +2,109 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatReply } from "@/lib/formatReply";
-import { MAX_MESSAGES, type ChatMessage, type LearnerProfile, type MentorResponse } from "@/lib/mentor";
+import {
+  MAX_TOOL_ROUNDS,
+  trimHistory,
+  type Content,
+  type LearnerProfile,
+  type MentorResponse,
+  type Part,
+  type ToolOutcome,
+} from "@/lib/mentor";
 import { KEYS, readJson, readString, writeJson, writeString } from "@/lib/storage";
 
 const MAX_RETRIES = 3;
 const REQUEST_TIMEOUT_MS = 60_000;
+const MAX_DISPLAY = 80;
 
-/** A chat bubble. Only bubbles with `saved` are part of the conversation sent to Gemini. */
-interface Bubble extends ChatMessage {
-  saved: boolean;
-  error?: boolean;
+/** What the chat shows. The conversation sent to Gemini is kept separately (`history`). */
+type DisplayItem =
+  | { kind: "user"; text: string }
+  | { kind: "model"; text: string }
+  | { kind: "error"; text: string }
+  | { kind: "action"; icon: string; label: string; ok: boolean; undo?: ToolOutcome["undo"]; undone?: boolean };
+
+interface SavedChat {
+  v: 2;
+  history: Content[];
+  display: DisplayItem[];
 }
 
 type Pending = null | { note?: string };
 
+const SUGGESTIONS = [
+  "What should I learn next?",
+  "Quiz me on my next skill",
+  "Make me a 3-week study plan",
+  "I already know Python — mark it done",
+];
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Loads saved chat, accepting the old single-file app format ({ role, parts: [{ text }] }) too. */
-function loadSavedChat(): Bubble[] {
-  const raw = readJson<unknown[]>(KEYS.chat, []);
-  if (!Array.isArray(raw)) return [];
-  return raw.flatMap((item): Bubble[] => {
-    const m = item as { role?: string; text?: string; parts?: { text?: string }[] };
-    const text = m.text ?? m.parts?.[0]?.text ?? "";
-    return (m.role === "user" || m.role === "model") && text ? [{ role: m.role, text, saved: true }] : [];
-  });
+/** Loads saved chat, upgrading the older text-only format ([{ role, text }] or [{ role, parts }]). */
+function loadChat(): SavedChat {
+  const raw = readJson<unknown>(KEYS.chat, null);
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && (raw as SavedChat).v === 2) {
+    const saved = raw as SavedChat;
+    return {
+      v: 2,
+      history: Array.isArray(saved.history) ? saved.history : [],
+      display: Array.isArray(saved.display) ? saved.display : [],
+    };
+  }
+  const chat: SavedChat = { v: 2, history: [], display: [] };
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      const m = item as { role?: string; text?: string; parts?: { text?: string }[] };
+      const text = m.text ?? m.parts?.[0]?.text ?? "";
+      if ((m.role !== "user" && m.role !== "model") || !text) continue;
+      chat.history.push({ role: m.role, parts: [{ text }] });
+      chat.display.push({ kind: m.role, text });
+    }
+  }
+  return chat;
 }
 
-function saveChat(bubbles: Bubble[]) {
-  writeJson(
-    KEYS.chat,
-    bubbles.filter((b) => b.saved).slice(-MAX_MESSAGES).map(({ role, text }) => ({ role, text })),
-  );
-}
-
-async function askMentor(messages: ChatMessage[], profile: LearnerProfile, userKey: string | null) {
+async function askMentor(contents: Content[], profile: LearnerProfile, userKey: string | null) {
   const res = await fetch("/api/mentor", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...(userKey ? { "x-user-gemini-key": userKey } : {}) },
-    body: JSON.stringify({ messages, profile }),
+    body: JSON.stringify({ contents, profile }),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return (await res.json()) as MentorResponse;
 }
 
-export default function Mentor({ profile }: { profile: LearnerProfile }) {
-  const [bubbles, setBubbles] = useState<Bubble[]>([]);
+interface Props {
+  profile: LearnerProfile;
+  runTool: (name: string, args: Record<string, unknown>) => ToolOutcome;
+  onUndo: (undo: NonNullable<ToolOutcome["undo"]>) => void;
+  onMessageSent: () => void;
+  /** Text to put in the message box (e.g. from the dashboard's "Ask the mentor for a plan") */
+  draft: { text: string; n: number } | null;
+}
+
+export default function Mentor({ profile, runTool, onUndo, onMessageSent, draft }: Props) {
+  const [history, setHistory] = useState<Content[]>([]);
+  const [display, setDisplay] = useState<DisplayItem[]>([]);
   const [pending, setPending] = useState<Pending>(null);
   const [input, setInput] = useState("");
   const [serverKey, setServerKey] = useState<boolean | null>(null);
   const [userKey, setUserKey] = useState<string | null>(null);
   const [keyInput, setKeyInput] = useState("");
   const chatRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // The latest learner profile, so each tool round sends progress the previous round changed
+  const profileRef = useRef(profile);
+  useEffect(() => {
+    profileRef.current = profile;
+  });
 
   useEffect(() => {
+    const saved = loadChat();
     /* eslint-disable react-hooks/set-state-in-effect -- syncing from localStorage, which only exists in the browser */
-    setBubbles(loadSavedChat());
+    setHistory(saved.history);
+    setDisplay(saved.display);
     setUserKey(readString(KEYS.apiKey));
     /* eslint-enable react-hooks/set-state-in-effect */
     fetch("/api/mentor")
@@ -66,81 +113,151 @@ export default function Mentor({ profile }: { profile: LearnerProfile }) {
       .catch(() => setServerKey(false));
   }, []);
 
+  // A draft from elsewhere in the app fills the message box
+  useEffect(() => {
+    if (!draft) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a one-off request from another tab
+    setInput(draft.text);
+    inputRef.current?.focus();
+  }, [draft]);
+
   // Keep the newest message in view
   useEffect(() => {
     const el = chatRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [bubbles, pending]);
+  }, [display, pending]);
 
   const busy = pending !== null;
   const needsKey = serverKey === false && !userKey;
 
-  async function send() {
-    const text = input.trim();
+  function save(nextHistory: Content[], nextDisplay: DisplayItem[]) {
+    const h = trimHistory(nextHistory);
+    const d = nextDisplay.slice(-MAX_DISPLAY);
+    setHistory(h);
+    setDisplay(d);
+    writeJson(KEYS.chat, { v: 2, history: h, display: d } satisfies SavedChat);
+  }
+
+  /** One request to Gemini, retrying when it's busy. Throws on network errors and timeouts. */
+  async function requestWithRetry(contents: Content[]): Promise<MentorResponse> {
+    for (let attempt = 0; ; attempt++) {
+      const result = await askMentor(contents, profileRef.current, serverKey ? null : userKey);
+      const err = "error" in result ? result.error : null;
+      // 429 can mean "slow down" (worth a retry) or "quota used up" (retrying won't help)
+      const quota = err && /quota/i.test(err.message);
+      const retryable = err && !quota && (err.code === 503 || (err.code === 429 && err.reason !== "rate_limited"));
+      if (!retryable || attempt >= MAX_RETRIES) return result;
+      const wait = 2000 * 2 ** attempt;
+      setPending({ note: `Gemini is busy — retrying in ${wait / 1000}s (attempt ${attempt + 1} of ${MAX_RETRIES})…` });
+      await sleep(wait);
+      setPending({});
+    }
+  }
+
+  async function send(raw?: string) {
+    const text = (raw ?? input).trim();
     if (!text || busy) return;
     setInput("");
-
-    const userBubble: Bubble = { role: "user", text, saved: !needsKey };
-    const conversation = [...bubbles, userBubble];
-    setBubbles(conversation);
+    let shown: DisplayItem[] = [...display, { kind: "user", text }];
+    setDisplay(shown);
 
     if (needsKey) {
-      setBubbles([
-        ...conversation,
+      shown = [
+        ...shown,
         {
-          role: "model",
+          kind: "error",
           text: "⚠️ **API key not set.** Please read the yellow box below — it takes about 2 minutes to get a free key from Google AI Studio and paste it in.",
-          saved: false,
-          error: true,
         },
-      ]);
+      ];
+      save(history, shown);
       return;
     }
 
+    onMessageSent();
     setPending({});
-    const history = conversation.filter((b) => b.saved).map(({ role, text }) => ({ role, text }));
-    let result: MentorResponse;
+    let contents: Content[] = [...history, { role: "user", parts: [{ text }] }];
+    let failure: string | null = null;
+
     try {
-      for (let attempt = 0; ; attempt++) {
-        result = await askMentor(history, profile, serverKey ? null : userKey);
-        const err = "error" in result ? result.error : null;
-        const retryable = err && (err.code === 503 || (err.code === 429 && err.reason !== "rate_limited"));
-        if (!retryable || attempt >= MAX_RETRIES) break;
-        const wait = 2000 * 2 ** attempt;
-        setPending({ note: `Gemini is busy — retrying in ${wait / 1000}s (attempt ${attempt + 1} of ${MAX_RETRIES})…` });
-        await sleep(wait);
+      for (let round = 0; ; round++) {
+        const result = await requestWithRetry(contents);
+        if ("error" in result) {
+          const { code, message, reason } = result.error;
+          const hint =
+            reason === "no_key"
+              ? ""
+              : /quota/i.test(message)
+                ? " — the free Gemini quota for this key is used up. Try again later, or use another key."
+                : code === 503 || code === 429
+                ? " — please try again in a minute."
+                : code >= 400 && code < 500 && !reason
+                  ? " — check your API key."
+                  : "";
+          failure = `⚠️ ${message}${hint}`;
+          break;
+        }
+
+        const parts = result.parts;
+        contents = [...contents, { role: "model", parts }];
+        const reply = parts
+          .filter((p): p is Extract<Part, { text: string }> => "text" in p)
+          .map((p) => p.text)
+          .join("");
+        if (reply) shown = [...shown, { kind: "model", text: reply }];
+
+        const calls = parts.filter((p): p is Extract<Part, { functionCall: unknown }> => "functionCall" in p);
+        if (!calls.length) break;
+
+        // Run each requested tool here in the browser, show it, and send the results back
+        const responses: Part[] = [];
+        for (const { functionCall } of calls) {
+          const outcome = runTool(functionCall.name, functionCall.args ?? {});
+          shown = [...shown, { kind: "action", icon: outcome.icon, label: outcome.label, ok: outcome.ok, undo: outcome.undo }];
+          responses.push({
+            functionResponse: {
+              name: functionCall.name,
+              ...(functionCall.id ? { id: functionCall.id } : {}),
+              response: { ok: outcome.ok, result: outcome.message },
+            },
+          });
+        }
+        setDisplay(shown);
+        contents = [...contents, { role: "user", parts: responses }];
+
+        if (round + 1 >= MAX_TOOL_ROUNDS) {
+          // The actions above already happened; just don't keep a half-finished exchange for Gemini
+          failure = "I stopped after several steps — tell me if you'd like me to continue.";
+          break;
+        }
       }
     } catch (err) {
       const timedOut = err instanceof DOMException && (err.name === "TimeoutError" || err.name === "AbortError");
-      result = {
-        error: {
-          code: 0,
-          message: timedOut
-            ? "Gemini took too long to answer (over 60s). Please try again."
-            : "Network error. Please check your internet connection and try again.",
-        },
-      };
+      failure = timedOut
+        ? "Gemini took too long to answer (over 60s). Please try again."
+        : "Network error. Please check your internet connection and try again.";
     }
 
     setPending(null);
-    let next: Bubble[];
-    if ("reply" in result) {
-      next = [...conversation, { role: "model", text: result.reply, saved: true }];
+    if (failure) {
+      // Keep what happened on screen, but don't send a broken exchange back to Gemini next time
+      save(history, [...shown, { kind: "error", text: failure }]);
     } else {
-      const { code, message, reason } = result.error;
-      const hint =
-        reason === "no_key" ? "" : code === 503 || code === 429 ? " — please try again in a minute." : code >= 400 && code < 500 && !reason ? " — check your API key." : "";
-      // The failed question stays on screen but isn't sent again with the next message
-      next = conversation.map((b) => (b === userBubble ? { ...b, saved: false } : b));
-      next.push({ role: "model", text: `⚠️ ${message}${hint}`, saved: false, error: true });
+      save(contents, shown);
     }
-    setBubbles(next);
-    saveChat(next);
+  }
+
+  function undo(index: number) {
+    const item = display[index];
+    if (item?.kind !== "action" || !item.undo || item.undone) return;
+    onUndo(item.undo);
+    save(
+      history,
+      display.map((d, i) => (i === index ? { ...item, undone: true } : d)),
+    );
   }
 
   function clearChat() {
-    setBubbles([]);
-    saveChat([]);
+    save([], []);
   }
 
   function saveKey() {
@@ -154,7 +271,10 @@ export default function Mentor({ profile }: { profile: LearnerProfile }) {
     <div className="panel">
       <div>
         <h1 className="sec-head">AI mentor</h1>
-        <div className="sec-sub">Ask anything about your AI learning journey. Powered by Google Gemini.</div>
+        <div className="sec-sub">
+          Ask anything — or ask it to <strong>do</strong> things: quiz you, plan your weeks, mark skills done, open pages.
+          Powered by Google Gemini.
+        </div>
       </div>
       <div className="card mentor-card">
         <div className="chat-tools">
@@ -166,35 +286,47 @@ export default function Mentor({ profile }: { profile: LearnerProfile }) {
           <div className="msg">
             <div className="msg-av ai">AI</div>
             <div className="msg-bub">
-              Hi! I&apos;m your AI Mentor. I can help you figure out what to learn next, explain any AI concept
-              simply, recommend free courses, or answer career questions. What&apos;s on your mind?
+              Hi! I&apos;m your AI Mentor. I can see your skill tree, so I know what you&apos;ve finished and what&apos;s
+              next. I can explain anything, quiz you, build a study plan and update your progress — just ask.
             </div>
           </div>
-          <div className="msg">
-            <div className="msg-av ai">AI</div>
-            <div className="msg-bub">
-              Try asking:
-              <br />• &quot;What should I learn after Python basics?&quot;
-              <br />• &quot;Explain transformers simply&quot;
-              <br />• &quot;How do I get a job in AI?&quot;
-              <br />• &quot;What&apos;s the difference between ML and deep learning?&quot;
-            </div>
-          </div>
-          {bubbles.map((b, i) => (
-            <div key={i} className={b.role === "user" ? "msg user-msg" : "msg"}>
-              <div className={b.role === "user" ? "msg-av usr" : "msg-av ai"}>{b.role === "user" ? "U" : "AI"}</div>
-              {b.role === "user" ? (
-                <div className="msg-bub">{b.text}</div>
-              ) : (
-                <div className="msg-bub" dangerouslySetInnerHTML={{ __html: formatReply(b.text) }} />
-              )}
-            </div>
-          ))}
+          {display.map((item, i) => {
+            if (item.kind === "action") {
+              return (
+                <div key={i} className={`action-card${item.ok ? "" : " failed"}${item.undone ? " undone" : ""}`}>
+                  <span aria-hidden="true">{item.icon}</span>
+                  <span className="action-text">
+                    {item.label}
+                    {item.undone && " — undone"}
+                  </span>
+                  {item.undo && !item.undone && (
+                    <button className="link-btn" onClick={() => undo(i)}>
+                      Undo
+                    </button>
+                  )}
+                </div>
+              );
+            }
+            const user = item.kind === "user";
+            return (
+              <div key={i} className={user ? "msg user-msg" : "msg"}>
+                <div className={user ? "msg-av usr" : "msg-av ai"}>{user ? "U" : "AI"}</div>
+                {user ? (
+                  <div className="msg-bub">{item.text}</div>
+                ) : (
+                  <div
+                    className={`msg-bub${item.kind === "error" ? " err" : ""}`}
+                    dangerouslySetInnerHTML={{ __html: formatReply(item.text) }}
+                  />
+                )}
+              </div>
+            );
+          })}
           {pending && (
             <div className="msg">
               <div className="msg-av ai">AI</div>
               <div className="msg-bub">
-                <div className="typing" aria-label="Mentor is typing">
+                <div className="typing" aria-label="Mentor is working">
                   <div className="t-dot" />
                   <div className="t-dot" />
                   <div className="t-dot" />
@@ -204,6 +336,15 @@ export default function Mentor({ profile }: { profile: LearnerProfile }) {
             </div>
           )}
         </div>
+        {!busy && (
+          <div className="suggestions" aria-label="Suggested requests">
+            {SUGGESTIONS.map((s) => (
+              <button key={s} className="chip" onClick={() => send(s)}>
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
         <form
           className="chat-row"
           onSubmit={(e) => {
@@ -212,9 +353,10 @@ export default function Mentor({ profile }: { profile: LearnerProfile }) {
           }}
         >
           <input
+            ref={inputRef}
             type="text"
             aria-label="Message the AI mentor"
-            placeholder="Ask your AI mentor..."
+            placeholder="Ask, or tell the mentor what to do…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
           />
