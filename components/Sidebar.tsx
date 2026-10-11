@@ -8,10 +8,12 @@ interface Props {
   onLevel: (level: Level) => void;
   focus: Focus | null;
   onFocus: (focus: Focus) => void;
-  pct: number;
+  done: number;
+  total: number;
 }
 
-export default function Sidebar({ open, level, onLevel, focus, onFocus, pct }: Props) {
+export default function Sidebar({ open, level, onLevel, focus, onFocus, done, total }: Props) {
+  const pct = Math.round((done / total) * 100);
   return (
     <aside id="sidebar" className={open ? "open" : undefined}>
       <div className="sb-label">My level</div>
@@ -35,8 +37,10 @@ export default function Sidebar({ open, level, onLevel, focus, onFocus, pct }: P
       ))}
       <div className="prog-wrap">
         <div className="prog-label">
-          <span>Overall progress</span>
-          <span>{pct}%</span>
+          <span>Skills complete</span>
+          <span>
+            {done}/{total}
+          </span>
         </div>
         <div className="prog-track">
           <div className="prog-fill" style={{ width: `${pct}%` }} />

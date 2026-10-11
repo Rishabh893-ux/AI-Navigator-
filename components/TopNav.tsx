@@ -1,17 +1,9 @@
 "use client";
 
 import { UPDATES } from "@/lib/content";
+import { PAGES, type PanelId } from "@/lib/pages";
 
-export type PanelId = "dashboard" | "roadmap" | "topics" | "progress" | "mentor" | "updates";
-
-const TABS: { id: PanelId; label: string }[] = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "roadmap", label: "Roadmap" },
-  { id: "topics", label: "Topics" },
-  { id: "progress", label: "Progress" },
-  { id: "mentor", label: "AI Mentor" },
-  { id: "updates", label: "Updates" },
-];
+export type { PanelId };
 
 interface Props {
   panel: PanelId;
@@ -36,7 +28,7 @@ export default function TopNav({ panel, onSelect, showBadge, theme, onToggleThem
         AI Navigator
       </div>
       <div className={`nav-tabs${menuOpen ? " open" : ""}`} id="nav-tabs-menu">
-        {TABS.map((tab) => (
+        {PAGES.map((tab) => (
           <button
             key={tab.id}
             className={`nav-tab${panel === tab.id ? " active" : ""}`}

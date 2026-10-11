@@ -1,59 +1,47 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { COURSES, FOCUS_AREAS, UPDATES_VERSION, type Focus, type Level } from "@/lib/content";
-import { KEYS, readJson, readString, writeJson, writeString } from "@/lib/storage";
-import TopNav, { type PanelId } from "./TopNav";
+import { FOCUS_AREAS, LEVELS, TOPICS, UPDATES_VERSION, type Focus, type Level } from "@/lib/content";
+import type { ToolOutcome } from "@/lib/mentor";
+import { PAGES, PAGE_IDS, type PanelId } from "@/lib/pages";
+import { sanitizePlan } from "@/lib/plan";
+import { SKILLS, SKILL_BY_ID, doneCount, isUnlocked, progressOf } from "@/lib/skills";
+import { KEYS, readString, writeString } from "@/lib/storage";
+import QuizDialog from "./QuizDialog";
 import Sidebar from "./Sidebar";
+import Toasts from "./Toasts";
+import TopNav from "./TopNav";
+import { useLearner } from "./useLearner";
 import Dashboard from "./panels/Dashboard";
-import Roadmap from "./panels/Roadmap";
-import Topics from "./panels/Topics";
-import Progress from "./panels/Progress";
 import Mentor from "./panels/Mentor";
+import Roadmap from "./panels/Roadmap";
+import Skills from "./panels/Skills";
+import Stats from "./panels/Stats";
+import Topics from "./panels/Topics";
 import Updates from "./panels/Updates";
 
 type Theme = "light" | "dark";
 
-const LEVEL_IDS: Level[] = ["beginner", "intermediate", "advanced"];
-
-function dayKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-}
-
-/** Counts consecutive days the app was opened, and records today's visit. */
-function recordVisit(): number {
-  const data = readJson<{ last?: string; count?: number }>(KEYS.streak, {});
-  const today = new Date();
-  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
-  let streak = 1;
-  if (data.last === dayKey(today)) streak = data.count || 1;
-  else if (data.last === dayKey(yesterday)) streak = (data.count || 0) + 1;
-  writeJson(KEYS.streak, { last: dayKey(today), count: streak });
-  return streak;
-}
+const levelLabel = (id: string) => LEVELS.find((l) => l.id === id)?.label ?? id;
+const pageLabel = (id: string) => PAGES.find((p) => p.id === id)?.label ?? id;
 
 export default function Navigator() {
+  const learner = useLearner();
   const [panel, setPanel] = useState<PanelId>("dashboard");
-  const [level, setLevel] = useState<Level>("beginner");
   const [focus, setFocus] = useState<Focus | null>(null);
-  const [progress, setProgress] = useState<boolean[]>(() => COURSES.map((c) => c.initiallyDone));
   const [theme, setTheme] = useState<Theme>("light");
   const [menuOpen, setMenuOpen] = useState(false);
   const [updatesSeen, setUpdatesSeen] = useState(true);
-  const [streak, setStreak] = useState(1);
-  const [loaded, setLoaded] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const [revealSkill, setRevealSkill] = useState(0);
+  const [revealTopic, setRevealTopic] = useState<{ id: string; n: number } | null>(null);
+  const [quizSkill, setQuizSkill] = useState<string | null>(null);
+  const [mentorDraft, setMentorDraft] = useState<{ text: string; n: number } | null>(null);
 
-  // Load everything saved in the browser once, after the first render
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- syncing from localStorage, which only exists in the browser */
-    const saved = readJson<boolean[] | null>(KEYS.progress, null);
-    if (Array.isArray(saved)) setProgress(COURSES.map((_, i) => !!saved[i]));
-    const savedLevel = readString(KEYS.level) as Level | null;
-    if (savedLevel && LEVEL_IDS.includes(savedLevel)) setLevel(savedLevel);
+    /* eslint-disable react-hooks/set-state-in-effect -- syncing from the browser, which only exists after mount */
     setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
     setUpdatesSeen(readString(KEYS.updatesSeen) === UPDATES_VERSION);
-    setStreak(recordVisit());
-    setLoaded(true);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
@@ -66,13 +54,29 @@ export default function Navigator() {
     }
   }, []);
 
-  const chooseLevel = useCallback(
-    (next: Level, openRoadmap: boolean) => {
-      setLevel(next);
-      writeString(KEYS.level, next);
-      if (openRoadmap) showPanel("roadmap");
+  const selectSkill = useCallback(
+    (id: string) => {
+      setSelectedSkill(id);
+      setRevealSkill((n) => n + 1);
+      showPanel("skills");
     },
     [showPanel],
+  );
+
+  const openTopic = useCallback(
+    (id: string) => {
+      setRevealTopic((r) => ({ id, n: (r?.n ?? 0) + 1 }));
+      showPanel("topics");
+    },
+    [showPanel],
+  );
+
+  const chooseLevel = useCallback(
+    (next: Level, openRoadmap: boolean) => {
+      learner.setLevel(next);
+      if (openRoadmap) showPanel("roadmap");
+    },
+    [learner, showPanel],
   );
 
   const chooseFocus = useCallback(
@@ -83,14 +87,6 @@ export default function Navigator() {
     [showPanel],
   );
 
-  const toggleCourse = useCallback((index: number) => {
-    setProgress((current) => {
-      const next = current.map((done, i) => (i === index ? !done : done));
-      writeJson(KEYS.progress, next);
-      return next;
-    });
-  }, []);
-
   const toggleTheme = useCallback(() => {
     setTheme((current) => {
       const next: Theme = current === "dark" ? "light" : "dark";
@@ -100,22 +96,105 @@ export default function Navigator() {
     });
   }, []);
 
-  const done = progress.filter(Boolean).length;
-  const total = COURSES.length;
-  const pct = Math.round((done / total) * 100);
-  const profile = {
-    level,
-    done: COURSES.filter((_, i) => progress[i]).map((c) => c.title),
-    todo: COURSES.filter((_, i) => !progress[i]).map((c) => c.title),
-  };
+  const askMentor = useCallback(
+    (text: string) => {
+      setMentorDraft((d) => ({ text, n: (d?.n ?? 0) + 1 }));
+      showPanel("mentor");
+    },
+    [showPanel],
+  );
+
+  /** Runs a tool the AI Mentor asked for. Validates everything — the request comes from the model. */
+  const runTool = useCallback(
+    (name: string, args: Record<string, unknown>): ToolOutcome => {
+      const skillId = typeof args.skill_id === "string" ? args.skill_id : "";
+      const skill = SKILL_BY_ID[skillId];
+      const fail = (message: string): ToolOutcome => ({ ok: false, message, icon: "⚠️", label: message });
+      const progress = learner.getProgress();
+
+      switch (name) {
+        case "mark_skill_complete": {
+          if (!skill) return fail(`Unknown skill “${skillId}”.`);
+          if (progressOf(progress, skill.id).done) {
+            return { ok: true, message: `${skill.title} was already complete.`, icon: "✅", label: `${skill.title} is already complete` };
+          }
+          const previous = learner.markKnown(skill.id);
+          return {
+            ok: true,
+            message: `Marked ${skill.title} as complete (as already known, not quiz-verified).`,
+            icon: "✅",
+            label: `Marked ${skill.title} as complete`,
+            undo: { skillId: skill.id, previous },
+          };
+        }
+        case "start_quiz": {
+          if (!skill) return fail(`Unknown skill “${skillId}”.`);
+          if (!isUnlocked(progress, skill.id)) {
+            const missing = skill.prereqs.filter((id) => !progressOf(progress, id).done).map((id) => SKILL_BY_ID[id].title);
+            return fail(`The ${skill.title} quiz is locked until ${missing.join(" and ")} ${missing.length > 1 ? "are" : "is"} complete.`);
+          }
+          setQuizSkill(skill.id);
+          return {
+            ok: true,
+            message: `Opened the ${skill.title} quiz. The learner is taking it now; their score will update the skill tree.`,
+            icon: "📝",
+            label: `Opened the ${skill.title} quiz`,
+          };
+        }
+        case "open_page": {
+          const page = args.page as PanelId;
+          if (!PAGE_IDS.includes(page)) return fail(`Unknown page “${String(args.page)}”.`);
+          if (page === "skills" && skill) {
+            selectSkill(skill.id);
+            return { ok: true, message: `Showing ${skill.title} in the skill tree.`, icon: "📍", label: `Opened Skill Tree → ${skill.title}` };
+          }
+          const topic = TOPICS.find((t) => t.id === args.topic_id);
+          if (page === "topics" && topic) {
+            openTopic(topic.id);
+            return { ok: true, message: `Opened the “${topic.title}” explainer.`, icon: "📍", label: `Opened Topics → ${topic.title}` };
+          }
+          showPanel(page);
+          return { ok: true, message: `Opened the ${pageLabel(page)} page.`, icon: "📍", label: `Opened ${pageLabel(page)}` };
+        }
+        case "save_study_plan": {
+          const plan = sanitizePlan(args);
+          if (!plan) return fail("That study plan had no valid weeks, so nothing was saved.");
+          learner.savePlan(plan);
+          return {
+            ok: true,
+            message: `Saved “${plan.title}” (${plan.weeks.length} weeks) to the learner's dashboard.`,
+            icon: "🗓️",
+            label: `Saved study plan “${plan.title}” · ${plan.weeks.length} ${plan.weeks.length === 1 ? "week" : "weeks"} — see Dashboard`,
+          };
+        }
+        case "set_level": {
+          const level = LEVELS.find((l) => l.id === args.level)?.id;
+          if (!level) return fail(`Unknown level “${String(args.level)}”.`);
+          learner.setLevel(level);
+          return { ok: true, message: `Level set to ${levelLabel(level)}.`, icon: "🎚️", label: `Level set to ${levelLabel(level)}` };
+        }
+        default:
+          return fail(`Unknown action “${name}”.`);
+      }
+    },
+    [learner, selectSkill, openTopic, showPanel],
+  );
+
   const focusLabel = FOCUS_AREAS.find((f) => f.id === focus)?.label;
+  const quiz = quizSkill ? SKILL_BY_ID[quizSkill] : null;
+  const mentorProfile = {
+    level: learner.level,
+    progress: learner.progress,
+    streak: learner.streak.count,
+    plan: learner.plan?.title ?? null,
+  };
 
   return (
     <>
       <TopNav
         panel={panel}
         onSelect={showPanel}
-        showBadge={loaded && !updatesSeen}
+        showBadge={!updatesSeen}
         theme={theme}
         onToggleTheme={toggleTheme}
         menuOpen={menuOpen}
@@ -124,34 +203,88 @@ export default function Navigator() {
       <div id="main">
         <Sidebar
           open={menuOpen}
-          level={level}
+          level={learner.level}
           onLevel={(l) => chooseLevel(l, true)}
           focus={focus}
           onFocus={chooseFocus}
-          pct={pct}
+          done={doneCount(learner.progress)}
+          total={SKILLS.length}
         />
         <main id="content">
           {/* Every tab stays mounted (just hidden), so a half-typed search or a pending mentor reply survives switching tabs */}
           <div hidden={panel !== "dashboard"}>
-            <Dashboard done={done} total={total} streak={streak} onNavigate={showPanel} />
+            <Dashboard
+              progress={learner.progress}
+              level={learner.level}
+              streak={learner.streak.count}
+              plan={learner.plan}
+              achievements={learner.achievements}
+              onNavigate={showPanel}
+              onQuiz={setQuizSkill}
+              onSelectSkill={selectSkill}
+              onAskMentor={askMentor}
+              onClearPlan={() => learner.savePlan(null)}
+            />
+          </div>
+          <div hidden={panel !== "skills"}>
+            <Skills
+              progress={learner.progress}
+              level={learner.level}
+              selectedId={selectedSkill}
+              onSelect={setSelectedSkill}
+              onQuiz={setQuizSkill}
+              onMarkKnown={(id) => learner.markKnown(id)}
+              onReset={learner.resetSkill}
+              onMarkTierKnown={learner.markTierKnown}
+              onOpenTopic={openTopic}
+              revealKey={revealSkill}
+            />
           </div>
           <div hidden={panel !== "roadmap"}>
-            <Roadmap level={level} onLevel={(l) => chooseLevel(l, false)} />
+            <Roadmap
+              level={learner.level}
+              onLevel={(l) => chooseLevel(l, false)}
+              progress={learner.progress}
+              onSelectSkill={selectSkill}
+            />
           </div>
           <div hidden={panel !== "topics"}>
-            <Topics focus={focus} focusLabel={focusLabel} />
+            <Topics focus={focus} focusLabel={focusLabel} reveal={revealTopic} onOpen={() => learner.logActivity()} />
           </div>
-          <div hidden={panel !== "progress"}>
-            <Progress progress={progress} onToggle={toggleCourse} />
+          <div hidden={panel !== "stats"}>
+            <Stats
+              progress={learner.progress}
+              quizLog={learner.quizLog}
+              activity={learner.activity}
+              streak={learner.streak}
+              achievements={learner.achievements}
+            />
           </div>
           <div hidden={panel !== "mentor"}>
-            <Mentor profile={profile} />
+            <Mentor
+              profile={mentorProfile}
+              runTool={runTool}
+              onUndo={({ skillId, previous }) => learner.restoreSkill(skillId, previous)}
+              onMessageSent={learner.countMentorMessage}
+              draft={mentorDraft}
+            />
           </div>
           <div hidden={panel !== "updates"}>
             <Updates />
           </div>
         </main>
       </div>
+
+      {quiz && (
+        <QuizDialog
+          key={quiz.id}
+          skill={quiz}
+          previousBest={progressOf(learner.progress, quiz.id).best}
+          onComplete={(score) => learner.recordQuiz(quiz.id, score)}
+          onClose={() => setQuizSkill(null)}
+        />
+      )}
+      <Toasts ids={learner.toasts} onDismiss={learner.dismissToast} />
     </>
   );
 }
